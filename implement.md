@@ -1,0 +1,1701 @@
+# Qwemini Implementation Plan
+
+Date: 2026-04-03
+Status: first executable slice extended with daemon-owned approvals, explicit approval-wait state, persisted checkpoints, cross-session recovery actions, richer run inspection, a first-class tool invocation ledger, a lineage-aware archive view, live Qwen resume metadata, a vendoring-ready Qwen launch seam, a deeper bounded Qwen session/control vendor import, a non-blocking Qwen control loop, a product-owned cancel flow, a session-level approval policy surface, a second live Gemini adapter on the same daemon/session seam, a Gemini ACP default path, a provider-owned Windows Gemini PTY patch, a direct-entrypoint Windows Qwen launch path, a Qwen session-id refresh hardening pass, the first daemon-owned orchestration package above both providers, explicit reviewer/verifier follow-up sessions, daemon-owned delegate/handoff child runs, MCP-aware routing signals, a daemon-backed orchestration board, a first shared mcp-hub signal layer, a workspace-scoped MCP/tool registry, provider-owned tool catalogs feeding workspace-local tool-plane signals, session-aware tool-plane scope, daemon-owned live session tool registration signals, provider-connected Qwen/Gemini tool enumeration feeding explicit session registration records, provider-runtime registration ingestion from Qwen `system.tools` plus Gemini ACP tool metadata, bounded timeout fallback for provider `mcp list` connected-tool probes, hardened requirement inference so `run_shell_command` maps to `shell` deterministically, clearer shell evidence breakdown by `confirmedBy` source, a modularized shell tool-plane evidence panel, an extracted run-inspector module for transcript/messages/timeline rendering, extracted shell status/summary presentation helpers into `apps/web/src/shell-status-summary.js`, shell/daemon selection-refresh hardening with stale stream/snapshot guards in `apps/web/src/app.js`, additional shell/daemon race hardening for session-switch and recommendation/tool-plane refresh ordering in `apps/web/src/app.js`, a queue-based shell toast system inspired by Panes replacing the old single-slot notice flow, a shared protocol-owned requirement classifier consumed by daemon/providers/mcp-hub, a deterministic registration validation script under `scripts/`, a Gemini launch hardening path that accepts direct Node-script command overrides, extended edge-case deterministic probe fixtures for shell/workspace-read/mcp plus negative naming assertions, explicit provider-cli `mcp list` fallback metadata on connected-tool registrations, deterministic failure-and-timeout-path assertions that keep runtime and CLI evidence distinguishable, mixed-outcome deterministic fallback assertions for both provider permutations where one provider times out while the other fails, deterministic cross-scenario provider-summary assertions that validate observed provider-cli fallback metadata against the expected scenario matrix, optional machine-readable deterministic registration summaries for CI via `--summary-json` and `npm run check:registrations:json`, an explicit expected-vs-observed scenario matrix block in the JSON artifact with drift diagnostics and evidence partitioning across provider-runtime/provider-cli/event-observed signals, operator-loop runbook wiring for `npm run check:registrations`, typed React-rendered session/archive/orchestration, checkpoints, approvals, artifacts, tool-plane, shell summary/status, and shell control/form state surfaces driven by controller-owned state bridges, extracted controller state-mapper helpers so UI-facing coercion/build logic no longer bloats `apps/web/src/app-controller.ts`, extracted controller runtime/session loading helpers so session/runtime action flow no longer accumulates inline inside the controller shell bridge, extracted controller recommendation/run/follow-up action helpers so orchestration and mutation actions no longer accumulate inline inside the controller bridge, extracted controller run selection/refresh/stream lifecycle helpers so the remaining live-run transport path no longer accumulates inline inside the controller bridge, extracted controller UI sync helpers so derived provider/session notes and control-state mutations no longer accumulate inline inside the controller bootstrap, extracted controller requester/draft wiring so repetitive callback assignment no longer accumulates inline inside the controller bootstrap, extracted controller shell-state scaffolding so state shape/default initialization no longer accumulates inline inside the controller bootstrap, extracted controller bridge slot storage so exported React bridge subscriptions/requesters no longer accumulate inline inside the controller bootstrap, extracted controller bootstrap/reset helpers so the remaining session-transition and inspector-reset logic no longer accumulates inline inside the controller bridge, a Panes-inspired three-column shell redesign with persisted resizable columns and simple Qwemini-owned tab/navigation naming, a grouped quick-open command layer with session/run filtering plus a compact shortcut strip on top of the workbench, and a donor-driven docked shell pass that borrows Panes' dark rail plus unified content-card layout while preserving the daemon-owned API and controller contracts
+
+## Loop Queue
+
+### Now
+
+- keep orchestration on the daemon/package boundary while the Panes-derived shell pass stays wrapped, and continue trimming shell-side duplication and untyped shared helpers without changing routes or provider behavior
+
+### Next
+
+- continue the typed shell cleanup by collapsing the remaining projection/mapping duplication where protocol-owned shapes can be used directly or projected once, without changing daemon routes, provider behavior, or shell UX
+
+### Blocked
+
+- none
+
+## What Was Inspected
+
+### Local repo
+
+- `AGENTS.md`
+- `docs/architecture.md`
+- `README.md`
+
+### Local repo state
+
+- The repo now contains the daemon, local web shell, shared protocol/state packages, and live Qwen/Gemini provider adapters.
+- An active `implement.md` now tracks the loop queue and validated slice history.
+- `git rev-parse --show-toplevel` resolved to `C:/Users/User`, so `C:/Users/User/projects/qwemini` is not currently its own git root.
+
+### Upstream donors
+
+- Verified repositories with `git ls-remote`
+- Shallow-inspected these donors locally in a temp directory:
+  - `https://github.com/QwenLM/qwen-code`
+  - `https://github.com/google-gemini/gemini-cli`
+  - `https://github.com/openai/codex`
+  - `https://github.com/wygoralves/panes`
+- Inspected secondary references from their README files:
+  - `https://github.com/TentacleOpera/switchboard`
+  - `https://github.com/jjongguet/oh-my-gemini`
+
+## What Was Decided
+
+- Qwemini remains a new product-owned codebase. It should not become a forked shell around one donor.
+- Qwen Code is the first runtime donor because it already exposes a host-facing non-interactive session loop and permission control path that is closer to a daemon-owned integration.
+- Gemini CLI is the second runtime donor, but it should not be integrated as a plain wrapped subprocess if Qwemini wants daemon-owned approvals and inspectable tool governance.
+- Codex is the product-shape reference for the daemon/client boundary, event lifecycle, and approval model. It is not the implementation base.
+- The first executable Qwemini slice should prove the daemon, normalized events, SQLite state, and one live provider path before deeper multi-provider work.
+
+## Exact Donors Chosen
+
+### Qwen Code donor set
+
+- Repo: `https://github.com/QwenLM/qwen-code`
+- Inspected upstream commit: `92f7549bdc684f264ae09dc4a6f8e7398363f53e`
+- Concrete upstream locations currently pinned for the bounded vendoring scout:
+  - `packages/cli/src/nonInteractive/session.ts`
+  - `packages/cli/src/nonInteractive/types.ts`
+  - `packages/cli/src/nonInteractive/io/StreamJsonInputReader.ts`
+  - `packages/cli/src/nonInteractive/io/StreamJsonOutputAdapter.ts`
+  - `packages/cli/src/nonInteractive/control/ControlContext.ts`
+  - `packages/cli/src/nonInteractive/control/ControlDispatcher.ts`
+  - `packages/cli/src/nonInteractive/control/ControlService.ts`
+  - `packages/cli/src/nonInteractive/control/controllers/permissionController.ts`
+  - `packages/cli/src/nonInteractive/control/controllers/systemController.ts`
+  - `packages/cli/src/nonInteractive/control/controllers/sdkMcpController.ts`
+  - `packages/cli/src/nonInteractiveCli.ts`
+  - `packages/core/src/core/nonInteractiveToolExecutor.ts`
+  - `packages/core/src/tools/sdk-control-client-transport.ts`
+  - `packages/core/src/tools/tool-registry.ts`
+  - `packages/core/src/tools/tool-names.ts`
+  - `packages/core/src/confirmation-bus/message-bus.ts`
+  - `packages/core/src/config/config.ts`
+
+### Gemini CLI donor set
+
+- Repo: `https://github.com/google-gemini/gemini-cli`
+- Inspected upstream commit: `44c8b43328df432a6e5925a7762be4d6d91fca0f`
+- Concrete upstream locations chosen:
+  - `packages/cli/src/nonInteractiveCli.ts`
+  - `packages/core/src/output/types.ts`
+  - `packages/core/src/output/stream-json-formatter.ts`
+  - `packages/core/src/confirmation-bus/message-bus.ts`
+  - `packages/core/src/agent/agent-session.ts`
+  - `packages/core/src/agent/types.ts`
+  - `packages/cli/src/acp/commandHandler.ts`
+
+### Codex reference set
+
+- Repo: `https://github.com/openai/codex`
+- Concrete upstream locations chosen:
+  - `codex-rs/app-server/README.md`
+  - `codex-rs/app-server-protocol/src/protocol/common.rs`
+  - `codex-rs/app-server-protocol/src/protocol/v2.rs`
+  - `codex-rs/protocol/README.md`
+  - `codex-rs/state/`
+
+## Base Strategy
+
+- New Qwemini repo for product code
+- Selective vendoring for provider runtimes
+- Reference-only use of Codex for product shape
+- No whole-repo donor fork in the first slice
+
+This keeps Qwemini daemon-centered and provider-flexible while still borrowing the strongest existing runtime pieces instead of rebuilding them.
+
+## Bounded Codex-like v1 Plan
+
+### Phase A: prove the product boundary
+
+- Add a minimal workspace with:
+  - `apps/daemon`
+  - `apps/web`
+  - `packages/protocol`
+  - `packages/state`
+  - `packages/providers/qwen`
+- Define the smallest normalized event contract needed for:
+  - run start and completion
+  - output deltas
+  - tool requested and completed
+  - approval requested and resolved
+  - artifact created
+  - checkpoint saved
+
+### Phase B: prove one live provider
+
+- Vendor the bounded Qwen runtime slice under a Qwemini-owned vendor path
+- Build a `provider-qwen` adapter that launches that runtime behind the daemon
+- Translate Qwen stream/control events into Qwemini protocol events
+- Persist sessions, runs, events, approvals, tool invocations, artifacts, and checkpoints in SQLite
+
+### Phase C: prove the shell
+
+- Build a local web shell that only talks to the daemon
+- Show:
+  - session list
+  - active run stream
+  - tool activity
+  - approvals
+  - artifact list
+
+### Phase D: add the second provider
+
+- Start Gemini work only after Phase B is stable
+- Reuse the same adapter seam and event protocol
+- Vendor only the Gemini pieces needed to externalize approvals and tool activity cleanly
+
+## Validation Performed
+
+- Read the required local architecture docs.
+- Verified upstream donor repo existence and inspected concrete subpaths listed above.
+- Created the first executable scaffold:
+  - `apps/daemon`
+  - `apps/web`
+  - `packages/protocol`
+  - `packages/state`
+  - `packages/providers/qwen`
+- Installed the minimal workspace tooling with `npm install`.
+- Ran `npm run check`.
+- Smoke-tested the daemon against the real installed `qwen` CLI before auth was configured:
+  - `GET /api/runtime`
+  - `POST /api/sessions`
+  - `POST /api/sessions/:id/runs`
+  - `GET /api/runs/:id`
+- Confirmed the earlier real limitation with `qwen auth status`: Qwen was installed (`0.13.2`) but non-interactive auth was not configured, so the run failed gracefully with a persisted `run.failed`.
+- Built a temporary local fake-Qwen harness outside the repo and validated the new daemon-owned approval path end to end:
+  - provider health reports ready
+  - a run enters `awaiting_approval`
+  - the daemon persists `approval.requested`
+  - `POST /api/approvals/:id/resolve` approves the tool
+  - the run transitions through `approval.resolved`, `tool.started`, `tool.completed`, `message.created`, and `run.completed`
+- Re-checked static shell delivery after adding the run-state note and approval-wait UI treatment.
+- Re-ran the real installed `qwen` CLI after auth was configured:
+  - `qwen auth status` reports `Qwen OAuth`
+  - `GET /api/runtime` reports `Qwen CLI 0.13.2 ready.`
+  - a real daemon-backed run completes successfully with `run.completed`
+- Added and validated persisted session/resume metadata plus checkpoint records:
+  - a temporary fake-Qwen harness proved that the daemon stores `providerSessionId`, persists `checkpoint.saved` into the checkpoint table, and resumes a second run with recovered context
+  - a real two-run Qwen session on this machine completed successfully with stored `providerSessionId` and the second run correctly recalled prior-session context (`CRABMINT`)
+- Verified the local Gemini CLI on this machine:
+  - `gemini --version` reports `0.35.3`
+  - direct `gemini --output-format stream-json` probing showed `init`, `message`, `tool_use`, `tool_result`, and `result` records
+  - direct `gemini --resume <session_id>` probing successfully recalled prior-session context (`PEARLFOX`)
+- Fixed the Windows Gemini launch path in the adapter by resolving the installed npm shim into a direct Node entrypoint invocation instead of depending on brittle `.cmd` shell quoting.
+- Re-ran the daemon with Gemini wired as a first-class provider:
+  - `GET /api/runtime` reports both `Qwen CLI 0.13.2 ready.` and `Gemini CLI 0.35.3 ready.`
+  - a real daemon-backed Gemini session completed successfully and persisted a `providerSessionId`
+  - a real two-run Gemini session on this machine completed successfully and the second run correctly recalled prior-session context (`GLASSOTTER`)
+- Added and validated explicit recovery above the adapters:
+  - a real daemon-backed Gemini session stored `providerSessionId`
+  - `POST /api/sessions/:id/recover` created a new Qwemini session with the same provider session metadata
+  - a run in that recovered Gemini session correctly recalled prior-session context (`MINTFALCON`)
+  - `POST /api/checkpoints/:id/recover-session` created a new session from an existing persisted checkpoint record in shared state
+- Re-checked static shell delivery after splitting the run inspector into dedicated transcript, final-message, and recovery surfaces.
+- Added and validated first-class tool invocation persistence:
+  - the shared state layer now stores `tool_invocations` separately from the raw event log
+  - a real daemon-backed Gemini run that read `README.md` persisted a completed `read_file` tool invocation with `toolUseId`, input, status, and metadata
+  - `GET /api/runs/:id` now returns persisted `toolInvocations` alongside events, approvals, checkpoints, and artifacts
+- Added and validated a minimal archive/session-summary surface:
+  - `GET /api/archive` now returns session summaries with run counts and latest run status
+  - a real daemon-backed Gemini run plus recovered session appeared correctly in the archive summary response
+  - the shell now serves dedicated `run-history-list` and `archive-list` surfaces
+- Added and validated a bounded Qwen vendoring scout:
+  - shallow-cloned and inspected current upstream `qwen-code` at `92f7549bdc684f264ae09dc4a6f8e7398363f53e`
+  - pinned the currently confirmed non-interactive donor closure in `vendor/notes/qwen-code.md`
+  - updated the Qwen provider so it can prefer future vendored build candidates under `vendor/qwen-code/` before falling back to the external `qwen` binary
+  - re-ran `npm run check`
+  - re-checked the real local Qwen install:
+    - `qwen --version` reports `0.13.2`
+    - `qwen auth status` reports `Qwen OAuth`
+  - re-ran the daemon on a clean port and confirmed:
+    - `GET /api/runtime` reports `Qwen CLI 0.13.2 ready (external qwen on PATH).`
+    - a real daemon-backed Qwen run completed successfully with `run.completed` and final result `VENDORSEAM`
+- Added and validated the first actual bounded Qwen vendor import:
+  - vendored the pinned stream-json wire contract from `packages/cli/src/nonInteractive/types.ts`
+  - vendored the pinned parser helper from `packages/cli/src/nonInteractive/io/StreamJsonInputReader.ts`
+  - switched the Qwen provider to consume the vendored contract and parse helper instead of a local hand-written message schema
+  - re-ran `npm run check`
+  - re-ran the daemon on a clean port and confirmed:
+    - `GET /api/runtime` still reports `Qwen CLI 0.13.2 ready (external qwen on PATH).`
+    - a real daemon-backed Qwen run completed successfully with `run.completed` and final result `DONORWIRE`
+- Added a product-owned cancel flow above the providers:
+  - `POST /api/runs/:id/cancel` now marks active runs as `cancelled`
+  - the Qwen adapter now sends an upstream-shaped `interrupt` control request before falling back to child-process termination
+  - the shell now exposes a cancel action for `running` and `awaiting_approval` runs
+  - re-ran `npm run check`
+  - re-checked the real local Qwen install:
+    - `qwen --version` reports `0.13.2`
+    - `qwen auth status` reports `Qwen OAuth`
+  - re-ran the daemon on a clean port and confirmed a real Qwen cancellation:
+    - `GET /api/runtime` still reports `Qwen CLI 0.13.2 ready (external qwen on PATH).`
+    - `POST /api/runs/:id/cancel` produced a persisted `run.cancelled` event
+    - the final run status stayed `cancelled` with `errorMessage` set to `Cancelled by user.`
+  - re-ran a Gemini cancellation check on a second clean port and confirmed:
+    - the final run status stayed `cancelled`
+    - only `run.cancelled` remained in the terminal event set after the daemon started dropping superseded terminal events
+- Added and validated a session-level approval policy surface:
+  - sessions now persist `approvalPolicy` in the shared protocol and SQLite state instead of relying only on `QWEMINI_APPROVAL_POLICY`
+  - `PATCH /api/sessions/:id` now updates the selected session policy through the daemon-owned ledger
+  - the shell now exposes approval policy selection both at session creation time and for the selected session
+  - re-ran `npm run check`
+  - validated the policy behavior through the existing `QWEMINI_QWEN_COMMAND` override seam with a controlled fake-Qwen harness in an isolated temp workspace:
+    - `manual` sessions entered `awaiting_approval` until an explicit `POST /api/approvals/:id/resolve`
+    - a session patched to `allow` auto-approved the tool and completed with a persisted approved approval record
+    - a session patched to `deny` auto-denied the tool and completed with a persisted denied approval record plus `tool.denied`
+- Added and validated a deeper bounded Qwen control-path donor import:
+  - vendored the pinned stream-json output writer from `packages/cli/src/nonInteractive/io/StreamJsonOutputAdapter.ts`, trimmed to the host-side JSON-line transport Qwemini actually needs
+  - vendored and adapted the pinned control dispatcher shape from `packages/cli/src/nonInteractive/control/ControlDispatcher.ts` so initialize, interrupt, and `can_use_tool` replies run through a reusable control-plane helper instead of provider-local handwritten response plumbing
+  - switched the Qwen provider to use the vendored dispatcher for outbound `initialize` and `interrupt` requests plus inbound `can_use_tool` request handling
+  - re-ran `npm run check`
+  - re-ran a real daemon-backed Qwen session on a clean port and confirmed:
+    - `GET /api/runtime` reports `Qwen CLI 0.13.2 ready (external qwen on PATH).`
+    - a real daemon-backed run completed successfully with final result `DISPATCHWIRE`
+  - re-validated host approval handling through the `QWEMINI_QWEN_COMMAND` override seam with a controlled fake-Qwen harness:
+    - the run entered `awaiting_approval`
+    - the initialize response still updated `providerSessionId`
+    - approving the pending daemon record completed the tool invocation and the run with final result `DISPATCH-APPROVAL`
+- Added and validated a session-scoped Qwen control context import:
+  - vendored and adapted the pinned control context shape from `packages/cli/src/nonInteractive/control/ControlContext.ts`
+  - moved the vendored dispatcher onto that session-scoped context so it can track `inputClosed` and run-abort state instead of behaving like a loose writer wrapper
+  - updated the Qwen provider to create one control context per run and mark the vendored dispatcher input as closed when the child exits or fails
+  - re-ran `npm run check`
+  - re-ran a real daemon-backed Qwen session on a clean port and confirmed:
+    - `GET /api/runtime` reports `Qwen CLI 0.13.2 ready (external qwen on PATH).`
+    - a real daemon-backed run completed successfully with final result `CONTEXTWIRE`
+  - re-validated host approval handling through the `QWEMINI_QWEN_COMMAND` override seam with a controlled fake-Qwen harness:
+    - the run still entered `awaiting_approval`
+    - the initialize response still updated `providerSessionId`
+    - approving the pending daemon record completed the tool invocation and the run with final result `CONTEXT-APPROVAL`
+  - validated the fail-fast control path with an isolated fake-Qwen harness that exited before replying to `initialize`:
+    - the run reached terminal `failed` without hanging
+    - the persisted terminal error was `Failed to bootstrap Qwen SDK session`
+    - only `run.failed` remained in the terminal event set
+- Added and validated a non-blocking Qwen incoming control loop:
+  - updated the vendored control dispatcher so incoming control handlers are tracked independently and do not force stdout processing to wait on long-running approvals
+  - switched the Qwen provider to fire-and-forget inbound `control_request` handling while still routing errors back into normalized stderr deltas if dispatch itself fails
+  - re-ran `npm run check`
+  - validated the behavior through an isolated fake-Qwen harness that emitted a transcript delta after requesting approval but before the approval was resolved:
+    - the run stayed in `awaiting_approval`
+    - the extra `run.output.delta` was already persisted while the approval was still pending
+    - approving the daemon-owned approval record completed the run with final result `NONBLOCKING-CONTROL`
+  - re-ran a real daemon-backed Qwen session on a clean port and confirmed:
+    - `GET /api/runtime` reports `Qwen CLI 0.13.2 ready (external qwen on PATH).`
+    - a real daemon-backed run completed successfully with final result `ASYNCWIRE`
+- Added and validated lineage-aware archive metadata:
+  - sessions now persist recovery provenance in shared state, including whether they were recovered from a prior session or a specific checkpoint
+  - `POST /api/sessions/:id/recover` now creates a recovered session with `recovery.kind = session`
+  - `POST /api/checkpoints/:id/recover-session` now creates a recovered session with `recovery.kind = checkpoint` plus source checkpoint and source run ids
+  - the archive and recent-session shell lists now render that recovery provenance instead of treating recovered sessions as indistinguishable rows
+  - re-ran `npm run check`
+  - validated real Gemini session recovery lineage on a clean port:
+    - a real Gemini run completed and stored `providerSessionId`
+    - `POST /api/sessions/:id/recover` returned a session with `recovery.kind = session`
+    - `GET /api/archive` returned the same lineage metadata for that recovered session
+  - validated checkpoint lineage through the existing `QWEMINI_QWEN_COMMAND` override seam with a controlled fake-Qwen harness:
+    - the run emitted and persisted a checkpoint record
+    - `POST /api/checkpoints/:id/recover-session` returned a session with `recovery.kind = checkpoint`
+    - `sourceCheckpointId` and `sourceRunId` were preserved in the archive summary response
+
+## Current Implementation Result
+
+- Qwemini still has a product-owned daemon and shell boundary.
+- Qwen is no longer only a one-shot prompt shell-out; the provider now uses Qwen's stream-json SDK/control path.
+- Tool approvals are now daemon-owned records with an HTTP resolution path and UI surface.
+- Runs can now persist as `awaiting_approval`, which gives the shell and state layer an explicit product-owned pause state instead of overloading generic `running`.
+- Qwemini sessions now persist provider session IDs and use them to resume later Qwen and Gemini runs inside the same product-owned session.
+- Checkpoint events are now promoted into first-class persisted records in shared state.
+- Recovery is now an explicit product-owned action instead of only an implicit side effect of rerunning inside one selected session.
+- The shell now separates live transcript deltas from final assistant messages while keeping checkpoint history in its own recovery pane.
+- Tool activity is now backed by a shared persisted ledger instead of being reconstructed only from tool-related events in the browser.
+- Older and recovered sessions are now inspectable through archive summaries and per-session run history, and recovered sessions now keep explicit lineage back to their source session or checkpoint.
+- Gemini is now wired behind the same top-level daemon/session/run contract and can be selected per session without provider-specific UI branches.
+- Gemini still uses a simpler subprocess/event bridge than Qwen, and runtime health now reports that difference explicitly through provider capability flags instead of leaving it implicit.
+- Gemini now also has an experimental ACP bridge path behind `QWEMINI_GEMINI_MODE=acp`, which upgrades Gemini to daemon-owned approvals without vendoring Gemini source yet.
+- The Qwen adapter now has a vendoring-ready launch seam, and the current upstream donor closure is pinned in `vendor/notes/qwen-code.md` instead of living only in chat history.
+- The Qwen adapter now reuses a bounded in-repo donor for the stream-json contract layer plus the first host-side control writer/context/dispatcher helpers, reducing local protocol drift before the deeper runtime/control import.
+- The Qwen adapter now keeps processing stdout while host approval is pending, which moves it closer to the upstream session-loop behavior without importing the full qwen-code session manager.
+- Run cancellation is now product-owned at the daemon boundary instead of only being an implicit child-process concern inside provider adapters.
+- Approval policy is now a session-owned daemon/state setting with a shell surface, so provider governance no longer depends only on a global env default.
+- Gemini donor reconnaissance is now pinned in `vendor/notes/gemini-cli.md`, with the current conclusion that daemon-owned approvals would likely require the deeper agent/ACP/confirmation seam rather than one more formatter import.
+- The Gemini donor conclusion is now partially proven in running code: ACP is the right bridge seam, and the formatter path remains the fallback path rather than the upgrade path.
+- The shell now uses provider capability flags to disable misleading approval-policy controls for unsupported providers and to explain empty approval/checkpoint panes in provider-specific terms.
+- The daemon now enforces provider capability limits at the API boundary, so unsupported approval policies are rejected even outside the shell.
+- The daemon now preflights provider availability before creating a run, and the shell now disables run start when the selected provider is known-unavailable.
+- The Gemini ACP adapter now keeps tool titles and raw outputs intact in the shared ledger, keeps cancellation terminal, and fails cleanly when the current Windows Gemini terminal helper crashes instead of leaving runs stuck forever.
+- Qwemini now carries a provider-owned Windows Gemini runtime patch that preloads bounded `node-pty` fixes into Gemini ACP, so the product no longer depends on manual edits to the user's global Gemini install for shell-command stability.
+- Gemini ACP is now the default provider path in Qwemini, with `stream-json` retained as an explicit fallback mode instead of the primary runtime path.
+- Qwemini now resolves the global Windows `qwen` shim to the underlying Node entrypoint, so Qwen no longer launches through `qwen.cmd` when the direct runtime is available.
+- Qwemini now has a first shared orchestration package above both providers, so the daemon can recommend a provider and route a prompt into a new session without pushing that decision into adapters or browser-only logic.
+- Qwen now refreshes `providerSessionId` from later stream-json messages, so resumed sessions and checkpoints keep the freshest provider session metadata instead of only the bootstrap initialize value.
+- Qwemini now supports daemon-owned reviewer and verifier follow-up sessions above the providers, with orchestration metadata persisted on the session record and echoed in `run.started` events for later inspection.
+- Qwemini now supports daemon-owned delegate and handoff runs above the providers, with explicit orchestration role/kind metadata on the child session instead of burying those relationships in prompts alone.
+- Qwemini now routes with explicit tool requirements such as `mcp`, `shell`, and `workspace-write`, so provider selection no longer depends only on prompt keywords.
+- Qwemini now exposes a daemon-backed orchestration board that groups routed and child sessions into inspectable flows, so orchestration lineage is visible as one product-owned surface instead of only separate session and archive rows.
+- Qwemini now exposes a first shared mcp-hub signal layer, so routing can use daemon-owned tool-plane snapshots built from provider health plus recent normalized tool activity instead of relying only on prompt heuristics and manually checked tool hints.
+- Qwemini now supports a workspace-scoped tool registry in `.qwemini/mcp.json` or `.mcp.json`, so MCP routing depends on actual configured server availability for the selected workspace instead of only a hard-coded provider bias.
+- Qwemini now takes provider-owned tool catalogs from the adapters and combines them with workspace-local observed tool history, so the shared tool plane no longer relies on one daemon-global seeded baseline map.
+- Qwemini now distinguishes workspace-scoped and session-scoped tool-plane snapshots, so orchestration can route from the active session’s actual tool history instead of only the broader workspace signal.
+
+- Qwemini now persists daemon-owned live session tool registrations from normalized `tool.*` events, so session-scoped routing can incorporate what a provider has actually registered during that active session rather than only recent invocation history.
+- Qwemini now adds provider-connected tool enumeration from Qwen/Gemini CLI surfaces at run start and upserts those as explicit session-tool registrations, so session routing can distinguish provider-enumerated availability from event-inferred usage.
+- Qwemini now ingests provider-runtime registration payloads from Qwen `system.tools` messages and Gemini ACP tool metadata through normalized `tool.registered` events, so live session registrations are no longer limited to startup CLI probes and event-inferred invocations.
+- The shell now renders session registration evidence (`provider-enumerated` vs `event-observed`) in a dedicated Tool Plane section, and tool-plane rendering logic is extracted into `apps/web/src/tool-plane.js` instead of growing the monolithic `app.js`.
+- The shell now renders transcript/messages/timeline run-inspector views through `apps/web/src/run-inspector.js`, so event splitting and inspector formatting utilities are no longer embedded inline inside `apps/web/src/app.js`.
+- The legacy inline fallback/commented tool activity renderer has been removed from `apps/web/src/app.js` now that `tool-plane.js` is the only active rendering path.
+
+## Next Bounded Slice
+
+The next implementation slice should be:
+
+1. Keep orchestration above adapters and take one bounded shell-typing slice: introduce shared typed daemon-response models plus a small typed web API helper for the controller flow modules, without changing daemon routes or product behavior.
+2. Keep shell behavior unchanged on success while preserving existing daemon API/event routes, controller bridge exports, and compatibility IDs that still bridge to controller-managed controls.
+3. Keep the slice narrow and validation-focused (`npm run build:web`, `npm run check`, `npm run check -w @qwemini/web`, and targeted daemon-hosted smoke checks).
+
+That keeps the next step narrow: close the controller-decomposition phase and start tightening the typed shell/daemon contract without changing provider boundaries or product architecture.
+
+## Latest Validation
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Re-inspected the concrete Panes UX donor before shell edits:
+  - shallow-cloned `https://github.com/wygoralves/panes.git` at commit `58adc78f50ece0fc0ed827cf3a96fdbe4615f095`
+  - inspected `src/components/layout/ThreeColumnLayout.tsx` for persisted resizable three-column layout patterns
+  - inspected `src/components/shared/CommandPalette.tsx` to bound the next likely UX donor slice without adopting Panes' app architecture
+- Completed bounded Panes-inspired shell UX slice for Qwemini:
+  - added `apps/web/src/lib/use-shell-layout.ts` for persisted left/right column widths with product-owned resize handling
+  - added `apps/web/src/components/TabBar.tsx` for reusable tab navigation across session, run, and utility surfaces
+  - rewired `apps/web/src/App.tsx` into a true three-column workbench with a session rail, central run workspace, utility rail, and tabbed section selection instead of one long dashboard stack
+  - restyled `apps/web/src/styles.css` into a denser cockpit-style shell with rail handles, stronger operational hierarchy, and a Panes-inspired dark workbench treatment
+  - preserved existing daemon routes, controller bridge contracts, and React-driven shell state ownership while changing only the product shell layer
+- Completed bounded keyboard-first shell interaction slice on top of the redesign:
+  - added `apps/web/src/components/QuickOpen.tsx` for a product-owned quick-open overlay with search, keyboard selection, and action execution
+  - rewired `apps/web/src/App.tsx` to expose `Ctrl/Cmd+K` quick-open, `Ctrl/Cmd+Shift+F` focus-view toggle, and direct quick actions for shell views, sessions, runs, and composer focus
+  - renamed donor-shaped `Pane*` naming in the shell layer to simpler Qwemini-owned names (`TabBar`, `useShellLayout`, `column-resize-handle`, `section-header`, `section-scroll`)
+- Completed validation after the Panes-inspired shell slice:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - verified the built CSS artifact contains the new `workbench-shell-focus`, `column-resize-handle`, `tab-bar`, and `quick-open` surfaces
+  - clean-port daemon smoke on `QWEMINI_PORT=4210` confirmed `GET /` returned `200` and `GET /api/runtime` still reported `qwen,gemini`
+- Completed bounded controller-maintainability slice for shell state scaffolding:
+  - added `apps/web/src/lib/controller-shell-state.ts` for the `ShellState` type and `createInitialShellState()` factory
+  - rewired `apps/web/src/app-controller.ts` to source its controller state from that shared scaffold instead of keeping the large state type/default object inline
+  - preserved the existing daemon contract and shell behavior while reducing more bootstrap-only state definition from `apps/web/src/app-controller.ts`
+- Completed bounded controller-maintainability slice for controller bridge slot storage:
+  - added `apps/web/src/lib/controller-bridge.ts` for exported run-view, shell-panel, shell-control, and shell-summary listener slots plus controller requester storage
+  - rewired `apps/web/src/app-controller.ts` to re-export subscription/request functions from that dedicated bridge module instead of keeping mutable bridge slots inline
+  - preserved the existing React bridge API and daemon behavior while removing the last listener/requester storage block from `apps/web/src/app-controller.ts`
+- Completed bounded controller-maintainability slice for bootstrap and reset helpers:
+  - added `apps/web/src/lib/controller-bootstrap-helpers.ts` for session-transition, archive/session/tool-plane unavailable handling, and run-inspector reset helpers
+  - rewired `apps/web/src/app-controller.ts` to construct those helpers through `createControllerBootstrapHelpers(...)`, so bootstrap-only reset logic no longer accumulates inline in the controller
+  - preserved the existing daemon API/event contract and shell behavior while closing the remaining bridge/bootstrap extraction track in `apps/web/src/app-controller.ts`
+- Completed validation after the final controller cleanup pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - clean-port daemon smoke on `QWEMINI_PORT=4208` confirmed `GET /` returned `200`, the served HTML still contains `<div id="root"></div>`, and `GET /api/runtime` still reported `qwen,gemini`
+- Completed bounded controller-maintainability slice for requester and draft wiring:
+  - added `apps/web/src/lib/controller-requesters.ts` for run/session selection requesters, draft update handlers, recovery/approval action callbacks, and user-triggered action requester wrappers
+  - rewired `apps/web/src/app-controller.ts` to source requester assignments from `createControllerRequesters(...)`, removing the last repetitive callback-assignment block from the controller bootstrap
+  - preserved the existing exported bridge API and daemon behavior while shrinking the remaining bootstrap-only logic in `apps/web/src/app-controller.ts`
+- Completed bounded controller-maintainability slice for UI sync and derived control state:
+  - added `apps/web/src/lib/controller-ui-sync.ts` for provider capability lookup plus derived session/provider notes and control-state sync helpers
+  - rewired `apps/web/src/app-controller.ts` to construct that helper through `createControllerUiSync(...)`, removing the remaining repeated `sync*` and provider-capability logic from the controller bootstrap
+  - preserved the existing daemon API/event contract, React bridge exports, and user-visible shell behavior while reducing the remaining state-derivation bulk in `apps/web/src/app-controller.ts`
+- Completed bounded controller-maintainability slice for run selection/refresh/stream lifecycle:
+  - added `apps/web/src/lib/controller-run-stream-flows.ts` for run snapshot application, run refresh, and live event-stream selection behavior
+  - rewired `apps/web/src/app-controller.ts` to construct that helper through `createControllerRunStreamFlows(...)`, leaving only lightweight shell-local reset behavior and callback wiring in the controller
+  - preserved the existing daemon stream endpoints, React bridge exports, run-state behavior, and user-visible shell behavior while removing the final large live-run async block from `apps/web/src/app-controller.ts`
+- Completed bounded controller-maintainability slice for recommendation/run/follow-up actions:
+  - added `apps/web/src/lib/controller-run-action-flows.ts` for recommendation refresh, session creation, run creation, route/delegate/handoff/follow-up actions, approval resolution, cancellation, and selected-session policy mutation
+  - rewired `apps/web/src/app-controller.ts` to construct that helper through `createControllerRunActionFlows(...)`, leaving the controller responsible for callback/export wiring and live run streaming while moving action orchestration out of the monolithic file
+  - preserved the existing daemon API/event contract, React bridge exports, and user-visible shell behavior while reducing more inline async mutation logic from `apps/web/src/app-controller.ts`
+- Completed bounded controller-maintainability slice for runtime/session flows:
+  - added `apps/web/src/lib/controller-runtime-session-flows.ts` for runtime bootstrap, session selection, archive refresh, tool-plane refresh, and recovery-action loading flows
+  - rewired `apps/web/src/app-controller.ts` to construct that helper through `createControllerRuntimeSessionFlows(...)`, keeping the controller as the coordinator while moving session/runtime request flow out of the monolithic file
+  - preserved existing daemon API usage, request exports, run streaming behavior, and React bridge contracts while reducing inline controller surface area
+- Completed bounded controller-maintainability slice for UI-facing state shaping:
+  - added `apps/web/src/lib/controller-state-mappers.ts` for raw-to-view coercion plus `buildRunViewState(...)` and `buildShellPanelsState(...)`
+  - removed the large inlined view-coercion block from `apps/web/src/app-controller.ts`, so the controller keeps orchestration/state transitions while typed shaping lives in a dedicated helper module
+  - rewired run-view and shell-panel emitters in `apps/web/src/app-controller.ts` to use the extracted builders
+- Completed bounded React migration slice for shell control/form state:
+  - introduced typed shell control state in `apps/web/src/lib/shell-controls-state.ts`
+  - added a dedicated controller control-state bridge in `apps/web/src/app-controller.ts` via `subscribeShellControlsState`
+  - moved session-create form state, run composer state, button disabled state, and action-button wiring into controlled React props/callbacks in `apps/web/src/App.tsx`
+  - removed the remaining imperative control `querySelector(...).addEventListener(...)` UI wiring from `apps/web/src/app-controller.ts`, while preserving the same controller-owned action flows behind exported request functions
+- Completed bounded React-rendering migration slice for shell summary/status surfaces:
+  - introduced typed shell summary state in `apps/web/src/lib/shell-summary-state.ts`
+  - added a dedicated controller summary bridge in `apps/web/src/app-controller.ts` via `subscribeShellSummaryState`
+  - moved provider/session health text, tool-plane summary text, session/provider notes, run header/status text, run-state note, and routing note rendering into `apps/web/src/App.tsx`
+  - replaced imperative run-status DOM mutation with a pure summary builder in `apps/web/src/shell-status-summary.js` (`buildRunPresentation`)
+- Completed bounded React-rendering migration slice for recent sessions, checkpoints, and artifacts:
+  - extended the typed shell panel view model in `apps/web/src/lib/shell-panels-state.ts` with recent-session, checkpoint, and artifact state
+  - added React components for those panels (`apps/web/src/components/RecentSessionList.tsx`, `apps/web/src/components/CheckpointListPanel.tsx`, `apps/web/src/components/ArtifactListPanel.tsx`)
+  - wired `apps/web/src/App.tsx` to the existing controller bridge plus a new checkpoint-recovery callback bridge (`requestCheckpointRecovery`)
+  - reduced imperative rendering surface in `apps/web/src/app-controller.ts` by replacing direct recent-session/checkpoint/artifact DOM writes with typed shell-panel state emission
+  - retired superseded imperative helper modules (`apps/web/src/inspector-panels.js`, `apps/web/src/run-artifacts.js`)
+- Completed bounded React-rendering migration slice for archive/orchestration, approvals, and tool-plane surfaces:
+  - introduced typed shell panel view models in `apps/web/src/lib/shell-panels-state.ts`
+  - added React components for archive/orchestration, approvals, and tool-plane panels (`apps/web/src/components/ArchiveSessionList.tsx`, `apps/web/src/components/OrchestrationFlowBoard.tsx`, `apps/web/src/components/ApprovalListPanel.tsx`, `apps/web/src/components/ToolActivityList.tsx`, `apps/web/src/components/ToolRegistrationEvidenceList.tsx`)
+  - wired `apps/web/src/App.tsx` to typed controller subscriptions (`subscribeShellPanelsState`) and action callback bridges (`requestSessionSelection`, `requestApprovalResolution`) so those surfaces are React-rendered without changing daemon/API contracts
+  - reduced imperative rendering surface in `apps/web/src/app-controller.ts` by replacing archive/tool-plane/approval DOM writes with typed shell-panel state emission (`emitShellPanelsState`)
+  - retired the superseded imperative archive/tool/approval renderers (`apps/web/src/archive-orchestration.js`, old tool/approval renderers in `apps/web/src/tool-plane.js` and `apps/web/src/inspector-panels.js`)
+- Completed bounded React-rendering migration slice for run history and run inspector surfaces:
+  - introduced typed run view models/utilities (`apps/web/src/lib/run-view-state.ts`, `apps/web/src/lib/run-inspector-views.ts`)
+  - added React components for run history and inspector panels (`apps/web/src/components/RunHistoryList.tsx`, `apps/web/src/components/RunTranscriptPanel.tsx`, `apps/web/src/components/RunMessagesPanel.tsx`, `apps/web/src/components/RunTimelinePanel.tsx`)
+  - wired `apps/web/src/App.tsx` to typed controller subscriptions (`subscribeRunViewState`) and run selection callback bridge (`requestRunSelection`) so run history + transcript/messages/timeline are React-rendered
+  - reduced imperative rendering surface in `apps/web/src/app-controller.ts` by removing legacy run-history/run-inspector DOM renderer usage and replacing it with typed run-view emission (`emitRunViewState`)
+  - retired obsolete imperative renderer modules now that React panels are the source of truth (`apps/web/src/run-history-list.js`, `apps/web/src/run-inspector.js`)
+- Re-ran validation after edits:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - daemon smoke on clean port `QWEMINI_PORT=4207` probing `/` and `/api/runtime`
+  - daemon smoke on clean port `QWEMINI_PORT=4206` probing `/` and `/api/runtime`
+  - daemon smoke on clean port `QWEMINI_PORT=4205` probing `/` and `/api/runtime`
+  - daemon smoke on clean port `QWEMINI_PORT=4204` probing `/` and `/api/runtime`
+  - daemon smoke on clean port `QWEMINI_PORT=4203` probing `/` and `/api/runtime`
+  - daemon smoke on clean port `QWEMINI_PORT=4200` probing `/` and `/api/runtime`
+  - `npm run build:web` re-run after an initial transient Windows `esbuild` spawn failure while loading `vite.config.ts`
+  - daemon smoke on clean ports (`QWEMINI_PORT=4192`, `QWEMINI_PORT=4193`, `QWEMINI_PORT=4194`, `QWEMINI_PORT=4195`, `QWEMINI_PORT=4196`, and `QWEMINI_PORT=4197`) probing `/` and `/api/runtime`
+- Validation result:
+  - all required static build/typecheck commands passed
+  - clean-port daemon smoke still returned `ROOT_STATUS=200`, `HAS_REACT_ROOT=True`, and `PROVIDERS=qwen,gemini` after the shell-state extraction
+  - clean-port daemon smoke still returned `ROOT_STATUS=200`, `HAS_REACT_ROOT=True`, and `PROVIDERS=qwen,gemini` after the requester extraction
+  - clean-port daemon smoke still returned `ROOT_STATUS=200`, `HAS_REACT_ROOT=True`, and `PROVIDERS=qwen,gemini` after the UI-sync extraction
+  - clean-port daemon smoke still returned `ROOT_STATUS=200`, `HAS_REACT_ROOT=True`, and `PROVIDERS=qwen,gemini` after the run-stream extraction
+  - clean-port daemon smoke still returned `ROOT_STATUS=200`, `HAS_REACT_ROOT=True`, and `PROVIDERS=qwen,gemini` after the action-flow extraction
+  - clean-port daemon smoke still returned `ROOT_STATUS=200`, `HAS_REACT_ROOT=True`, and `PROVIDERS=qwen,gemini` after the controller-flow extraction
+  - daemon-served shell root and runtime API stayed healthy after the React panel migration (`ROOT_STATUS=200`, `HAS_ROOT_DIV=True`, `RUNTIME_STATUS=200`, `HAS_QWEN=True`, `HAS_GEMINI=True`)
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed bounded architecture-preserving web-stack migration slice across `apps/web` plus daemon static hosting:
+  - scaffolded Vite + React + TypeScript entrypoints (`apps/web/index.html`, `apps/web/src/main.tsx`, `apps/web/src/App.tsx`, `apps/web/vite.config.ts`, `apps/web/tsconfig.json`, updated `apps/web/package.json`)
+  - migrated the previous imperative shell bootstrap from `apps/web/src/app.js` into `apps/web/src/app-controller.ts` as an explicit `initializeShell()` bridge invoked from React, preserving existing IDs and daemon API contracts
+  - removed legacy plain-shell entry files (`apps/web/src/index.html`, `apps/web/src/app.js`) now that React+Vite owns the frontend entry path
+  - updated daemon static serving in `apps/daemon/src/server.ts` to serve built assets from `apps/web/dist` with safe path checks, SPA fallback to `index.html`, and an explicit build-required message when dist assets are missing
+  - updated root scripts and README/operator flow so web assets build through `npm run build:web` (and `npm run dev` now builds web before daemon start)
+- Re-ran validation after edits:
+  - `npm install`
+  - `npm run build:web`
+  - `npm run check`
+  - daemon smoke: `npm run dev` then endpoint probes for `/` and `/api/health`
+- Validation result:
+  - web build passed (Vite emitted `dist/index.html` and hashed `dist/assets/*` bundles)
+  - repo typecheck passed (`npm run check`)
+  - daemon-served shell and API health checks passed (`shell_status=200`, `shell_has_root=True`, `shell_has_assets=True`, `health_status=200`)
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed targeted direct create-then-select transition hardening in `apps/web/src/app.js`:
+  - hardened `sessionForm` create-session flow to reuse shared guarded post-create transition helper (`transitionToNewSession`) instead of an inline `sessions.unshift` + `loadArchive` + `selectSession` chain
+  - removed the remaining unguarded direct create-session transition path so create-success/select-failure now follows explicit shared transition-failure handling and stale-state clearing behavior
+  - preserved successful create-session behavior while making post-create selection failures explicit and non-ambiguous
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+- Validation result:
+  - all required static commands passed
+- Live daemon smoke checks (feasible and executed):
+  - started daemon with fixture-backed providers (`QWEMINI_QWEN_COMMAND=scripts/fixtures/fake-qwen-runtime.mjs`, `QWEMINI_GEMINI_COMMAND=scripts/fixtures/fake-gemini-acp-agent.mjs`)
+  - exercised successful session creation via `/api/sessions` and verified post-create selection surface via `/api/sessions/:id`
+  - forced post-create selection failure by stopping daemon and retrying `/api/sessions/:id` for the newly created session, observing expected network failure (`fetch failed`)
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed targeted follow-up review/verify transition hardening in `apps/web/src/app.js`:
+  - hardened `createFollowUpRun` (`review`/`verify`) to reuse the shared guarded post-create session-switch helper (`transitionToNewSession`) used by other action chains
+  - removed the remaining inline `sessions.unshift` + `loadArchive` + `selectSession` chain from follow-up actions so partial failures no longer bypass shared transition-failure fallback behavior
+  - preserved successful follow-up behavior while ensuring failed post-action selection now follows explicit non-stale transition fallback notes and state handling
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+- Validation result:
+  - all required static commands passed
+- Live daemon smoke checks (feasible and executed):
+  - started daemon with fixture-backed providers (`QWEMINI_QWEN_COMMAND=scripts/fixtures/fake-qwen-runtime.mjs`, `QWEMINI_GEMINI_COMMAND=scripts/fixtures/fake-gemini-acp-agent.mjs`)
+  - exercised successful `review` follow-up transition via `/api/runs/:id/follow-up` and verified follow-up session selection surface via `/api/sessions/:id`
+  - forced review follow-up post-action selection failure by stopping daemon and retrying `/api/sessions/:id` for the newly created follow-up session, observing expected network failure (`fetch failed`)
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed targeted follow-up action transition hardening in `apps/web/src/app.js`:
+  - added a shared transition helper for post-create session-switch chains (`transitionToNewSession`) used by route/delegate/handoff/session-recovery/checkpoint-recovery actions
+  - hardened `routePrompt`, `delegatePrompt`, `handoffPrompt`, `recoverSelectedSession`, and `recoverFromCheckpoint` so partial action chains cannot leave stale recommendation/selection context when `selectSession` fails after session creation
+  - added explicit transition-failure note/notice handling (`setTransitionSelectionFailure`) and cleared stale recommendation state when a created session cannot be selected
+  - updated `selectSession` to return explicit success/failure booleans so follow-up action chains can react deterministically to post-action selection failures
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+- Validation result:
+  - all required static commands passed
+- Live daemon smoke checks (feasible and executed):
+  - started daemon with fixture-backed providers (`QWEMINI_QWEN_COMMAND=scripts/fixtures/fake-qwen-runtime.mjs`, `QWEMINI_GEMINI_COMMAND=scripts/fixtures/fake-gemini-acp-agent.mjs`)
+  - exercised successful route transition via `/api/orchestrator/route` and verified post-action session selection surface with `/api/sessions/:id`
+  - forced post-action selection failure by stopping daemon and retrying `/api/sessions/:id` for the newly created routed session, observing expected network failure (`fetch failed`)
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed targeted shell bootstrap/session-transition fallback hardening in `apps/web/src/app.js`:
+  - hardened `loadRuntime` `/api/runtime` failure path with explicit runtime-unavailable presentation plus clearing of selected session/run/tool-plane/archive panes to avoid stale bootstrap state
+  - hardened `loadSessions` `/api/sessions` failure path with explicit session-list unavailable rendering and deterministic clearing of selected-session panes when startup/session-list refresh fails
+  - hardened `selectSession` `/api/sessions/:id` failure path with explicit selection-cleared messaging and fallback clearing of run/tool-plane/archive panes so failed session switches do not leave stale details
+  - added explicit session-list unavailable helper and shared selected-session clearing helper so no-data-yet vs temporarily-unavailable vs selection-invalidated states are distinguishable in shell text
+  - updated initial bootstrap calls to tolerate individual bootstrap step failure (`loadRuntime`, `loadArchive`, `loadSessions`) without aborting script execution after the first transient API interruption
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+- Validation result:
+  - all required static commands passed
+- Live daemon smoke checks (feasible and executed):
+  - started daemon with fixture-backed providers (`QWEMINI_QWEN_COMMAND=scripts/fixtures/fake-qwen-runtime.mjs`, `QWEMINI_GEMINI_COMMAND=scripts/fixtures/fake-gemini-acp-agent.mjs`)
+  - validated normal bootstrap (`/api/runtime`, `/api/sessions`) and created a real session successfully
+  - exercised failed session-selection surface via `/api/sessions/00000000-0000-0000-0000-000000000000` and observed expected `404 Not found`
+  - forced bootstrap-failure surfaces by stopping daemon and retrying `/api/runtime` and `/api/sessions`, observing expected network failures (`fetch failed`)
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed targeted shell-side API/stream failure hardening in `apps/web/src/app.js`:
+  - hardened `selectRun` `/api/runs/:id` failure path with explicit run-detail fallback state so failed run selection does not leave stale detail panes active
+  - hardened `refreshRun` `/api/runs/:id` and follow-up `/api/sessions/:id` failure paths with explicit run-state warning text and early-return guards to avoid partial/stale mixed updates
+  - hardened `loadArchive` failure path for `/api/archive` and `/api/orchestrator/board` by clearing archive/board panes to explicit unavailable placeholders instead of preserving stale summaries
+  - hardened `loadToolPlane` failure path for `/api/tool-plane` by clearing tool-plane snapshot state and rendering explicit unavailable summary text
+  - added SSE stream `onerror` fallback note so stream disconnects while a run remains selected are explicit instead of silent stale state
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+- Validation result:
+  - all required static commands passed
+- Live daemon smoke checks (feasible and executed):
+  - started daemon with fixture-backed Qwen/Gemini commands (`QWEMINI_QWEN_COMMAND=scripts/fixtures/fake-qwen-runtime.mjs`, `QWEMINI_GEMINI_COMMAND=scripts/fixtures/fake-gemini-acp-agent.mjs`)
+  - exercised one run with live stream updates and observed stream payload data (`streamData true`)
+  - forced refresh failure path by stopping daemon and retrying `/api/runs/:id`, observing expected network fetch failure (`fetch failed`)
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed bounded shell/daemon hardening in `apps/web/src/app.js`:
+  - added session-selection request token guards so stale `selectSession` responses cannot overwrite newer session selection state
+  - added recommendation request token guards so stale recommend responses cannot overwrite newer prompt/session recommendation notes
+  - added tool-plane request token guards so stale `/api/tool-plane` responses cannot overwrite newer session/workspace tool-plane snapshots
+  - cleared run-detail view immediately on session switch and invalidated previous run stream token to prevent stale run details and controls during session transitions
+  - added defensive JSON parse guard in stream message handler to skip malformed/partial SSE payloads safely
+  - normalized `snapshot.runs` in session selection path for partial/null daemon response safety
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/shell-status-summary.js`
+  - `node --check apps/web/src/run-history-list.js`
+  - `node --check apps/web/src/archive-orchestration.js`
+  - `node --check apps/web/src/run-artifacts.js`
+- Validation result:
+  - all required static commands passed
+- Live daemon smoke check (feasible and executed):
+  - launched daemon on port `4794` with existing fake Qwen/Gemini runtime fixtures
+  - exercised two stream-updating runs end-to-end (`/api/sessions`, `/api/sessions/:id/runs`, `/api/runs/:id/stream`, `/api/runs/:id`)
+  - both runs reached `completed` with stream data observed (`streamData true`) and non-zero event counts (`events 7`)
+  - terminated background daemon process after verification
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed bounded shell/daemon integration hardening in `apps/web/src/app.js`:
+  - added run-selection token guards so stale `selectRun`/`refreshRun` async responses cannot overwrite newer run selection state
+  - ignored stale stream events when run selection changes and added event-source error cleanup
+  - normalized snapshot arrays defensively (`events`, `artifacts`, `approvals`, `checkpoints`, `toolInvocations`) to avoid null/partial payload rendering issues
+  - ensured `resetRunInspector` invalidates in-flight run selection token to prevent stale-state application after session switches
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+- Validation result:
+  - all required static commands passed
+- Live daemon smoke check (feasible and executed):
+  - started daemon with existing fake Qwen/Gemini runtime fixtures on port `4794`
+  - created a real session and run via HTTP API, opened `/api/runs/:id/stream`, consumed stream chunk data, then fetched final run snapshot
+  - observed run reached `completed` with streamed data present (`stream contained data event true`) and non-zero event count (`events 7`)
+  - stopped background daemon process after verification
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed shell status/summary maintainability extraction from `apps/web/src/app.js`:
+  - moved provider health summary, session/provider note text builders, run status note presentation, recommendation formatting, and shared timestamp/status/session summary helpers into `apps/web/src/shell-status-summary.js`
+  - `app.js` remains the orchestration/composition root and now delegates these presentation concerns to focused helpers
+  - removed dead inline presentation helpers after extraction
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/shell-status-summary.js`
+  - `node --check apps/web/src/run-history-list.js`
+  - `node --check apps/web/src/archive-orchestration.js`
+  - `node --check apps/web/src/run-artifacts.js`
+- Validation result:
+  - all commands passed
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed shell maintainability extraction for run-history/archive/orchestration rendering:
+  - moved run-history list rendering from `apps/web/src/app.js` into `apps/web/src/run-history-list.js`
+  - moved archive-session list and orchestration-board rendering from `apps/web/src/app.js` into `apps/web/src/archive-orchestration.js`
+  - `app.js` now delegates to focused renderers while preserving existing markup, IDs, click actions, and selection behavior
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/run-history-list.js`
+  - `node --check apps/web/src/archive-orchestration.js`
+- Validation result:
+  - all commands passed
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Completed shell maintainability extraction for run artifacts:
+  - moved artifact card rendering from `apps/web/src/app.js` into new `apps/web/src/run-artifacts.js`
+  - `app.js` now delegates artifact panel updates through the focused module while preserving existing shell structure and behavior
+- Re-ran validation after edits:
+  - `npm run check`
+- Validation result:
+  - type-check passed with no errors after module extraction
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Reworked deterministic registration matrix output in `scripts/validate-registration-signals.mjs`:
+  - explicit expected-vs-observed matrix now compares evidence partitions for `providerRuntime`, `providerCliFallback`, and `eventObserved`
+  - mismatch reporting is field-level and deterministic for CI drift diagnosis
+  - summary schema version remains `3` with matrix + scenario payloads
+- Hardened temp cleanup in validator execution loop to tolerate transient Windows `EPERM`/`EBUSY` during temp folder removal (retry/backoff + warning fallback) so validation does not fail on cleanup races.
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+  - `npm run check:registrations:json`
+- Validation result:
+  - all required commands passed
+  - deterministic fallback scenarios passed for failure/timeout and both mixed permutations
+  - JSON artifact regenerated with explicit expected-vs-observed evidence matrix
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Extended deterministic registration JSON output in `scripts/validate-registration-signals.mjs`:
+  - added explicit `scenarioMatrix` block containing expected and observed scenario/provider summaries
+  - matrix now carries separate evidence partitions for `providerRuntime`, `providerCliFallback`, and `eventObserved`
+  - matrix now includes deterministic drift diagnostics (`driftDetected`, `mismatches`) with per-field mismatch reasons
+  - validator now fails with a clear matrix-drift error when expected and observed scenario evidence diverges
+  - bumped summary schema version to `3`
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+  - `npm run check:registrations:json`
+- Validation result:
+  - all deterministic fallback scenarios passed (failure/timeout + both mixed permutations)
+  - JSON artifact includes expected-vs-observed matrix data for CI comparison
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Added optional machine-readable deterministic summary output to `scripts/validate-registration-signals.mjs`:
+  - new CLI argument: `--summary-json <path>` (also supports `--summary-json=<path>`)
+  - writes a structured scenario summary JSON artifact with provider fallback/status details
+  - keeps existing human-readable console output unchanged when no JSON flag is passed
+- Added script wiring in `package.json`:
+  - `npm run check:registrations:json` writes `artifacts/registration-summary.json`
+- Updated README validation docs to include the optional JSON artifact command.
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+  - `npm run check:registrations:json`
+- Validation result:
+  - all deterministic scenarios passed
+  - JSON artifact generated successfully at `artifacts/registration-summary.json`
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Expanded deterministic summary guardrails in `scripts/validate-registration-signals.mjs`:
+  - scenario summaries now report observed provider-cli fallback status (not echoed expected values)
+  - added cross-scenario summary assertions that enforce the expected fallback-status matrix for qwen/gemini across all scenarios
+  - summary assertions also enforce stable requirement/unclassified summary payloads for each provider
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+- Deterministic probe result:
+  - `failure`, `timeout`, `mixed-qwen-timeout-gemini-failure`, and `mixed-qwen-failure-gemini-timeout` scenarios all passed
+  - scenario summaries now reflect observed provider-cli fallback status values with cross-scenario matrix checks
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Added mixed-outcome deterministic probe coverage in `scripts/validate-registration-signals.mjs`:
+  - scenario ids: `mixed-qwen-timeout-gemini-failure` and `mixed-qwen-failure-gemini-timeout`
+  - both provider permutations now validate timeout/failure role inversion
+  - kept existing `failure` and `timeout` scenarios unchanged
+- Updated records for this slice:
+  - `README.md` status now explicitly includes mixed-outcome deterministic fallback coverage
+  - loop queue/status updated in `implement.md`
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+- Deterministic probe result:
+  - `failure`, `timeout`, `mixed-qwen-timeout-gemini-failure`, and `mixed-qwen-failure-gemini-timeout` scenarios all passed
+  - runtime requirements and provider-cli fallback evidence remained scenario-accurate
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Re-read operator loop docs for alignment: `agent-control/runbook/active.md`, `agent-control/runbook/current-priority.md`, and policy files under `agent-control/policies/`.
+- Ran baseline pre-edit checks:
+  - `npm run check`
+  - `npm run check:registrations`
+- Hardened provider probe reliability with explicit timeout fallback status in connected-tool metadata:
+  - Qwen/Gemini provider `mcpListProbeStatus` now distinguishes `timeout` from `failed`
+  - existing fallback metadata (`mcpListProbeSurface`, `mcpListProbeDetail`) remains preserved across all probe outcomes
+- Extended deterministic fixtures for timeout controls:
+  - `scripts/fixtures/fake-qwen-runtime.mjs` now supports `QWEMINI_FAKE_QWEN_MCP_LIST_TIMEOUT` and `QWEMINI_FAKE_QWEN_MCP_LIST_TIMEOUT_MS`
+  - `scripts/fixtures/fake-gemini-acp-agent.mjs` now supports `QWEMINI_FAKE_GEMINI_MCP_LIST_TIMEOUT` and `QWEMINI_FAKE_GEMINI_MCP_LIST_TIMEOUT_MS`
+- Expanded deterministic validator in `scripts/validate-registration-signals.mjs`:
+  - now runs both `failure` and `timeout` scenarios
+  - asserts scenario-specific provider-cli fallback status (`failed` vs `timeout`)
+  - keeps runtime registration mapping checks and unclassified-name exclusion checks intact
+  - asserts timeout details include timeout wording when probe status is `timeout`
+- Updated docs/loop guidance:
+  - `agent-control/runbook/active.md` now explicitly calls out timeout + failure coverage for `npm run check:registrations`
+  - `README.md` status now reflects deterministic coverage for both failure and timeout fallback paths
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+- Deterministic probe result:
+  - both `failure` and `timeout` scenarios passed for fake Qwen and fake Gemini ACP paths
+  - runtime-vs-cli evidence remained distinct and scenario-accurate
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Re-read operator loop docs for alignment: `agent-control/runbook/active.md`, `agent-control/runbook/current-priority.md`, and policy files under `agent-control/policies/`.
+- Ran baseline pre-edit checks:
+  - `npm run check`
+  - `npm run check:registrations`
+- Hardened provider connected-tool enumeration fallback metadata in Qwen and Gemini providers:
+  - provider-cli connected-tool registrations now carry explicit `mcpListProbeStatus`, `mcpListProbeSurface`, and `mcpListProbeDetail` metadata for failed/empty/configured probe outcomes
+  - fallback metadata is attached without changing daemon/provider boundaries or introducing new provider architecture
+- Extended deterministic fixture controls:
+  - `scripts/fixtures/fake-qwen-runtime.mjs` now supports forced `mcp list` failure via `QWEMINI_FAKE_QWEN_MCP_LIST_FAIL`
+  - `scripts/fixtures/fake-gemini-acp-agent.mjs` now supports forced `mcp list` failure via `QWEMINI_FAKE_GEMINI_MCP_LIST_FAIL`
+- Expanded deterministic validator assertions in `scripts/validate-registration-signals.mjs`:
+  - forced mcp-list failure path for both fake providers
+  - positive runtime registration mappings (`shell`, `workspace-read`, `mcp`) still verified
+  - unclassified tool names still excluded from emitted/persisted registrations
+  - provider-cli fallback metadata now asserted for failure-path evidence
+  - runtime registration evidence remains distinct and no fake `providerSurface = *.mcp.list` registrations are claimed on probe failure
+- Folded registration validation into operator-loop docs by adding explicit runbook guidance to include `npm run check:registrations` for registration-signal changes.
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+- Deterministic probe result:
+  - fake Qwen and fake Gemini ACP runs both completed successfully under forced mcp-list failure
+  - runtime and CLI fallback evidence remained distinguishable and assertions passed
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Re-read operator loop docs for alignment: `agent-control/runbook/active.md`, `agent-control/runbook/current-priority.md`, and policy files under `agent-control/policies/`.
+- Ran baseline pre-edit checks:
+  - `npm run check`
+  - `npm run check:registrations`
+- Extended deterministic fixture coverage:
+  - `scripts/fixtures/fake-qwen-runtime.mjs` now accepts configurable runtime tool names via `QWEMINI_FAKE_QWEN_RUNTIME_TOOLS`
+  - `scripts/fixtures/fake-gemini-acp-agent.mjs` now accepts configurable ACP tool titles via `QWEMINI_FAKE_GEMINI_TOOL_TITLES`
+- Expanded deterministic validator assertions in `scripts/validate-registration-signals.mjs`:
+  - positive mappings: `run_shell_command -> shell`, `read_file -> workspace-read`, `mcp__docs__search -> mcp`
+  - negative mapping guardrail: unclassified tool names such as `just_list` must not emit/persist `tool.registered`
+- Folded deterministic probe into operator-loop docs by adding `npm run check:registrations` to the README validation command set.
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+- Deterministic probe result:
+  - fake Qwen and fake Gemini ACP runs both completed successfully
+  - both providers emitted and persisted shell/workspace-read/mcp registrations with expected requirements
+  - both providers excluded unclassified registration names from emitted/persisted session tool registrations
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Ran baseline pre-edit checks:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/tool-plane.js`
+- Added a shared protocol-owned `inferRoutingToolRequirement` helper plus `isRoutingToolRequirement` guard and rewired daemon/provider/mcp-hub inference call sites to consume that shared path.
+- Hardened Gemini command override launch behavior so direct Node script overrides (`.js/.mjs/.cjs`) are executed without fragile Windows `.cmd` shell quoting.
+- Added deterministic fixture-backed validation under `scripts/`:
+  - `scripts/fixtures/fake-qwen-runtime.mjs`
+  - `scripts/fixtures/fake-gemini-acp-agent.mjs`
+  - `scripts/validate-registration-signals.mjs`
+  - root script alias `npm run check:registrations`
+- Re-ran validation after edits:
+  - `npm run check`
+  - `npm run check:registrations`
+- Deterministic probe result:
+  - both fake Qwen runtime and fake Gemini ACP runs completed successfully
+  - both persisted `run_shell_command` session registrations with `requirement = shell`
+  - both preserved runtime registration evidence (`confirmedBy = provider-runtime`, `registrationKind = provider-enumeration`)
+
+- Hardened requirement inference ordering/patterns in daemon/provider/mcp-hub code paths so shell tokens are matched before read/write fallbacks and broad `ls` substring false positives are removed.
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+- Re-ran daemon on clean port (`QWEMINI_PORT=4195`) with deterministic fake Gemini ACP shim and validated via real API calls:
+  - `POST /api/sessions` + `POST /api/sessions/:id/runs` completed successfully for provider `gemini`
+  - `GET /api/tool-plane?...sessionId=...` reports `run_shell_command` with `requirement = shell`
+  - registration evidence remains runtime-confirmed (`confirmedBy = provider-runtime`) with `registrationKind = provider-enumeration`
+
+- Ran baseline pre-edit checks for this loop:
+  - `npm run check`
+  - `node --check apps/web/src/tool-plane.js`
+  - `node --check apps/web/src/app.js`
+- Added bounded timeout behavior for provider connected-tool CLI probes in Qwen/Gemini providers via `QWEMINI_CONNECTED_TOOL_PROBE_TIMEOUT_MS` (default 2500ms), then re-ran `npm run check`.
+- Updated shell registration evidence rendering to show `confirmedBy` source counts (runtime/cli/unknown) alongside provider-enumerated vs event-observed counts.
+- Built a deterministic fake Gemini ACP runtime harness and validated end-to-end on a clean daemon port (`QWEMINI_PORT=4194`) using real API calls:
+  - `POST /api/sessions` + `POST /api/sessions/:id/runs` for provider `gemini` completed successfully against the deterministic ACP harness
+  - run events included `tool.registered` with `metadata.providerSurface = gemini.acp.session_update.tool_call`
+  - session tool registrations persisted runtime-confirmed metadata (`confirmedBy = provider-runtime`) for the same provider surface
+- Re-ran final checks:
+  - `npm run check`
+  - `node --check apps/web/src/tool-plane.js`
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Ran baseline pre-edit checks:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/run-inspector.js`
+- Added normalized `tool.registered` event support in protocol/daemon and wired provider-runtime registration emitters in Qwen and Gemini ACP adapters.
+- Re-ran `npm run check` after provider/daemon/protocol edits.
+- Re-ran the daemon on a clean probe port (`QWEMINI_PORT=4192`) with a deterministic fake Qwen stream-json harness and confirmed via real API calls:
+  - run events include `tool.registered` with `metadata.providerSurface = qwen.system.tools`
+  - session tool registry persisted three runtime registrations (`read_file`, `run_shell_command`, `mcp__docs__search`)
+  - persisted registrations preserve `registrationKind = provider-enumeration` and `confirmedBy = provider-runtime`
+- Probed Gemini ACP with real runs for registration evidence, but within this loop the sampled runs stayed `running` and did not emit tool events inside probe windows; ACP runtime-registration behavior remains functionally wired in code but empirically unconfirmed in this environment during this slice.
+- Removed residual legacy inline commented tool renderer from `apps/web/src/app.js`.
+- Re-ran final validation:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/tool-plane.js`
+
+- Re-read required planning/architecture docs before edits: `AGENTS.md`, `docs/architecture.md`, `README.md`, and `implement.md`.
+- Ran baseline pre-edit checks:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/inspector-panels.js`
+  - `node --check apps/web/src/tool-plane.js`
+- Extracted transcript/messages/timeline inspector rendering into `apps/web/src/run-inspector.js` and rewired `apps/web/src/app.js` to delegate to that module.
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/run-inspector.js`
+  - `node --check apps/web/src/inspector-panels.js`
+- Re-ran the daemon on a clean port (`QWEMINI_PORT=4191`) and probed live behavior:
+  - `GET /`, `GET /app.js`, and `GET /run-inspector.js` all returned `200`
+  - `GET /app.js` imports `./run-inspector.js`
+  - `GET /run-inspector.js` exports `renderRunInspectorPanels`
+  - `GET /api/runtime` returned both providers as available (`qwen:True, gemini:True`)
+
+- Added provider capability flags to the shared runtime contract and surfaced them in `/api/runtime` and the shell provider-health line.
+- Pinned Gemini donor reconnaissance in `vendor/notes/gemini-cli.md` against upstream commit `44c8b43328df432a6e5925a7762be4d6d91fca0f`, confirming that the current `stream-json` seam is formatter-only and that daemon-owned approvals would likely require the deeper confirmation-bus / agent / ACP path.
+- Added capability-aware shell guardrails so Gemini disables session approval-policy editing, the session-creation form forces `manual` for providers without daemon approval mediation, and empty approval/checkpoint panes now explain provider-specific limitations instead of implying missing data.
+- Added a shell error banner so daemon/API rejections are visible in the product instead of failing silently in the browser.
+- Re-ran `npm run check`.
+- Re-ran the daemon on clean ports and confirmed:
+  - `/api/runtime` still reports `qwen.capabilities.daemonApprovalMediation = true` and `gemini.capabilities.daemonApprovalMediation = false`
+  - `POST /api/sessions` accepts `approvalPolicy = allow` for Qwen but rejects the same policy for Gemini with `Provider gemini does not support daemon-managed approval policies.`
+  - the served shell HTML includes the new `app-notice`, `session-provider-note`, and `selected-session-note` surfaces
+- Added provider-availability preflight before run creation, so the daemon returns a `409` instead of attempting adapter launch when a provider is already known-unavailable.
+- Re-ran the daemon with `QWEMINI_GEMINI_COMMAND=missing-gemini-cli` and confirmed:
+  - `/api/runtime` reports `gemini.available = false`
+  - `POST /api/sessions/:id/runs` rejects with `Gemini CLI is not ready for runs: spawn missing-gemini-cli ENOENT`
+  - the served shell HTML includes the new `start-run-button` surface used by the availability-aware run-form guardrail
+- Added an experimental Gemini ACP bridge behind `QWEMINI_GEMINI_MODE=acp` using `@agentclientprotocol/sdk`.
+- Re-ran `npm install` and `npm run check`.
+- Re-ran the daemon with `QWEMINI_GEMINI_MODE=acp` and confirmed:
+  - `/api/runtime` reports `Gemini CLI 0.35.3 ready (ACP mode).`
+  - `gemini.capabilities.daemonApprovalMediation = true` on that path
+  - a real ACP-backed Gemini run completed successfully and returned `ACPBRIDGE`
+  - a second real ACP-backed Gemini run requested approval for a shell command, the daemon persisted `approval.requested` and `approval.resolved`, and the normalized tool ledger now contains `tool.requested` and `tool.started` on the approval path
+- Hardened the Gemini ACP adapter so tool titles and raw outputs survive across ACP update packets, cancellation suppresses later provider mutations, and detected `Error: AttachConsole failed` crashes now terminate the run cleanly.
+- Re-ran `npm run check`.
+- Re-ran the daemon with `QWEMINI_GEMINI_MODE=acp` on clean ports and confirmed:
+  - `/api/runtime` still reports `Gemini CLI 0.35.3 ready (ACP mode).`
+  - a simple real ACP-backed Gemini prompt completed successfully with final result `ACPPING`
+  - a real ACP-backed shell-command run now persists the correct tool title and command output in the shared tool ledger
+  - a real ACP-backed shell-command failure on this Windows machine now ends as `run.failed` with `Gemini ACP terminal helper failed.` instead of remaining stuck in `running`
+  - the terminal event ordering is now clean for that failure case: `run.failed` is the last event, with no later tool or transcript mutations appended after it
+- Added a provider-owned Windows Gemini runtime patch at `packages/providers/gemini/runtime/win32-node-pty-preload.cjs` and wired the Gemini ACP launch path to preload it automatically when Qwemini resolves the standard Node-based Gemini runtime on Windows.
+- Re-ran `npm run check`.
+- Re-ran the daemon with `QWEMINI_GEMINI_MODE=acp` on clean ports and confirmed:
+  - `/api/runtime` reports `Gemini CLI 0.35.3 ready (ACP mode, Qwemini Windows PTY patch).`
+  - a simple real ACP-backed Gemini prompt completed successfully with final result `PATCHPING`
+  - a real ACP-backed shell-command run that previously triggered the Windows PTY failure now completed successfully with final result `PATCHPWD`
+  - a second real shell-command run in the same Gemini session also completed successfully and returned `hello`, confirming that the repeated Windows shell-command path is now stable under the provider-owned patch
+- Hardened Gemini ACP resumed-session behavior by waiting for the asynchronous `loadSession` history replay to go quiet before starting the next prompt turn, while also preserving future support for `session/resume` if Gemini advertises it later.
+- Re-ran `npm run check`.
+- Re-ran the daemon with `QWEMINI_GEMINI_MODE=acp` on a clean port and confirmed:
+  - two real ACP-backed Gemini shell-command runs in the same session both completed successfully
+  - the second run artifact now contains only `RESUMEFIX2`, instead of replaying prior assistant text from the loaded session history
+- Switched the Gemini provider default from `stream-json` to `acp`, keeping `QWEMINI_GEMINI_MODE=stream-json` as an explicit fallback.
+- Re-ran `npm run check`.
+- Re-ran the daemon without any Gemini mode override and confirmed:
+  - `/api/runtime` reports `Gemini CLI 0.35.3 ready (ACP mode, Qwemini Windows PTY patch).`
+  - a default-path Gemini run completed successfully with final result `DEFAULTACP`
+- Hardened the Windows Qwen launch seam without adding new donor imports by resolving the global `qwen` shim to `@qwen-code/qwen-code/cli.js` and launching that entrypoint directly.
+- Re-ran `npm run check`.
+- Re-ran the daemon on clean ports and confirmed:
+  - `/api/runtime` reports `Qwen CLI 0.13.2 ready (external qwen on PATH via direct node entrypoint).`
+  - a real daemon-backed Qwen shell-command run still completed successfully
+  - the earlier Windows `DEP0190` child-process warning disappeared from the daemon stderr log after removing the `qwen.cmd` shell launch path
+- Added the first shared orchestration package at `packages/orchestrator` and wired the daemon-owned `POST /api/orchestrator/recommend` and `POST /api/orchestrator/route` APIs above the provider adapters.
+- Re-ran `npm install` and `npm run check`.
+- Re-ran the daemon on a clean port and confirmed:
+  - `/api/orchestrator/recommend` routes an analysis-heavy prompt to Gemini with `strategy = analysis-first`
+  - `/api/orchestrator/recommend` routes a tool-heavy coding prompt to Qwen with `strategy = tool-first`
+  - `/api/orchestrator/route` created a new Gemini session and completed a real routed run successfully
+  - the served shell HTML includes the new `route-run-button` and `orchestrator-note` surfaces
+- Revalidated Qwen session-id refresh with a controlled fake-Qwen harness through `QWEMINI_QWEN_COMMAND`:
+  - the bootstrap control response set `providerSessionId = session-bootstrap`
+  - a later provider message updated `session_id = session-updated`
+  - the persisted session record and checkpoint record both ended with `providerSessionId = session-updated`
+- Added daemon-owned `POST /api/runs/:id/follow-up` with `review` and `verify` modes above the provider adapters, plus persisted orchestration metadata on sessions.
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - a real completed Qwen source run could fork a `review` follow-up onto Gemini and complete successfully
+  - the same source run could fork a `verify` follow-up onto Qwen and complete successfully
+  - both follow-up sessions persisted `orchestration.kind`, `orchestration.role`, and `sourceRunId`
+  - both follow-up runs emitted `run.started.payload.orchestration` for inspectable lineage
+  - the served shell HTML includes the new `review-run-button` and `verify-run-button` surfaces
+- Added daemon-owned `POST /api/runs/:id/delegate` and `POST /api/runs/:id/handoff` above the provider adapters, plus explicit orchestration metadata on the child sessions.
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - a real completed Qwen source run could fork a `delegate` planner subtask onto Gemini and complete successfully
+  - the same source run could fork a `handoff` continuation onto Qwen and complete successfully
+  - both child sessions persisted `orchestration.kind`, `orchestration.role`, and `sourceRunId`
+  - both child runs emitted `run.started.payload.orchestration` for inspectable lineage
+  - the served shell HTML includes `delegate-run-button`, `handoff-run-button`, and `delegate-role-select`
+- Added explicit `requiredTools` routing signals to the shared orchestration contract and shell composer, covering `workspace-read`, `workspace-write`, `shell`, `network`, and `mcp`.
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - `/api/orchestrator/recommend` routes an MCP-signaled prompt to Gemini even when the prompt itself is analysis-only
+  - `/api/orchestrator/recommend` routes a shell-signaled prompt to Qwen even when the prompt text is neutral
+  - `/api/orchestrator/route` preserved `requiredTools = ['mcp']`, created a Gemini session, and completed successfully
+  - `/api/runs/:id/delegate` preserved `requiredTools = ['workspace-write']`, routed the delegated child to Qwen, and completed successfully
+  - `/api/runs/:id/handoff` preserved `requiredTools = ['shell']`, routed the handed-off child to Qwen, and completed successfully
+  - the served shell HTML includes the new `routingTool` checkboxes for `mcp`, `shell`, and `workspace-write`
+- Added `GET /api/orchestrator/board` above the provider adapters and shell archive view, grouping related sessions into rooted orchestration flows with per-session latest-run summaries and lineage depth.
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon outside the sandbox on a clean port and confirmed:
+  - `/api/orchestrator/board` returned 70 persisted flows from the local state ledger
+  - the first returned flow contained 3 related sessions, proving multi-session grouping instead of flat archive rows
+  - the served shell HTML includes the new `orchestration-board` surface and `Flows` section title
+- Added `packages/mcp-hub` as the first shared tool-plane signal package, with a daemon-owned snapshot built from provider health plus recent normalized tool-ledger history.
+- Added `GET /api/tool-plane` and fed that snapshot into orchestration recommendation for route, delegate, and handoff decisions.
+- Re-ran `npm install`, `npm run check`, and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on clean ports and confirmed:
+  - `/api/tool-plane` reports `qwen` ready for `workspace-read, workspace-write, shell`
+  - `/api/tool-plane` reports `gemini` ready for `workspace-read, shell, network, mcp`
+  - `/api/orchestrator/recommend` with `requiredTools = ['shell', 'workspace-write']` routes to `qwen` and returns 2 explicit signal lines
+  - `/api/orchestrator/recommend` with `requiredTools = ['mcp']` routes to `gemini` and returns signal evidence based on live tool-plane readiness plus recent completion counts
+  - the served shell HTML includes the new `tool-plane-note` surface
+- Extended `packages/mcp-hub` with a workspace-scoped tool registry loader for `.qwemini/mcp.json` and `.mcp.json`, including MCP server command availability checks and per-tool enable/permission overrides.
+- Updated `/api/tool-plane` to accept `workspacePath`, and updated the shell to load tool-plane state for the selected workspace instead of using one global snapshot.
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on clean ports and confirmed:
+  - `/api/tool-plane?workspacePath=<temp-ready-workspace>` returned a concrete `registryPath`, 2 configured MCP servers, and `gemini.readyTools` including `mcp`
+  - `/api/orchestrator/recommend` with `requiredTools = ['mcp']` on that ready workspace routed to `gemini` and returned 4 evidence lines, including the workspace registry path and ready MCP server id
+  - `/api/orchestrator/recommend` with `requiredTools = ['mcp']` on a second workspace containing only a missing MCP server now rejects with `No provider currently has MCP ready for this workspace. Add an enabled MCP server in .qwemini/mcp.json or .mcp.json first.`
+- Moved baseline provider tool ownership out of `packages/mcp-hub` and into the provider adapters through `toolCatalog()` on the shared `ProviderAdapter` interface.
+- Updated the daemon tool-plane builder to filter observed tool history by the selected workspace path instead of using one daemon-global recent-tool bucket.
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - `/api/tool-plane?workspacePath=C:\\Users\\User\\projects\\qwemini` still reports real observed tool history for the repo workspace
+  - `/api/tool-plane?workspacePath=<fresh-temp-workspace>` reports `no recent tool history yet` instead of inheriting the repo workspace's prior tool counts
+  - the same fresh workspace shows `gemini:workspace-read.observedInvocationCount = 0`, while the repo workspace still reports the observed count from actual prior runs
+- Extended the tool-plane contract with explicit `scope` and `sessionId`, and updated `/api/tool-plane` plus orchestration recommendation to accept a selected `sessionId`.
+- Added session-scoped recent tool lookup in shared state and updated the shell to request session-aware tool-plane snapshots when a session is selected.
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - `/api/tool-plane?workspacePath=C:\\Users\\User\\projects\\qwemini` reports `scope = workspace`
+  - `/api/tool-plane?workspacePath=C:\\Users\\User\\projects\\qwemini&sessionId=<existing-session>` reports `scope = session`
+  - for the same repo workspace, `gemini:workspace-read.observedInvocationCount` stayed `17` at workspace scope but dropped to `0` for a selected Qwen session with no Gemini history
+  - `/api/orchestrator/recommend` with that `sessionId` returned session-local signal evidence and kept routing explanations consistent with the narrowed scope
+- Added daemon-owned live session tool registration persistence:
+  - shared protocol now includes `SessionToolRegistration`, `ToolPlaneSnapshot.registeredSessionTools`, and provider-level `sessionRegisteredTools`/`sessionRegisteredCount` signals
+  - shared state now persists `session_tool_registry` rows keyed by `session_id + provider_id + tool_name`
+  - daemon event ingestion now upserts session tool registrations from normalized `tool.*` events
+  - session-scoped tool-plane snapshots now include those registration records and provider summaries include live registration counts
+- Updated orchestrator scoring to apply a bounded bonus for required tools that are live-registered in the selected session.
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - a real Qwen run completed with `runStatus = completed`, `toolInvocationCount = 1`, and `registeredSessionToolsCount = 1` on the new session snapshot
+  - `/api/tool-plane?workspacePath=C:\\Users\\User\\projects\\qwemini&sessionId=<new-session>` returned `qwen.sessionRegisteredCount = 1`
+  - `/api/orchestrator/recommend` with that `sessionId` returned session-registration evidence in `signals` and selected `primaryProviderId = qwen`
+- Added provider-connected tool enumeration on the shared adapter seam:
+  - `ProviderAdapter` now exposes `enumerateConnectedTools(query)` in shared protocol
+  - Qwen and Gemini providers now implement connected-tool enumeration using provider-owned surfaces (`toolCatalog` plus CLI `mcp list` probing)
+  - daemon run start now upserts provider-enumerated connected tools into `session_tool_registry` as explicit registration records (`registrationKind = provider-enumeration`)
+- Hardened session registration evidence:
+  - event-driven registration upserts now mark `registrationKind = event-observed`
+  - tool-plane provider summaries now include provider-enumerated registration counts
+  - orchestration signal lines now include provider-enumerated vs event-observed session registration evidence
+- Re-ran `npm run check` and `node --check apps/web/src/app.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - a real Qwen run completed with `toolInvocationCount = 0` while `qwen.sessionRegisteredCount = 3` from provider-enumerated registrations (`workspace-read`, `workspace-write`, `shell`)
+  - `/api/orchestrator/recommend` on that session returned `qwen session registration evidence: 3 provider-enumerated, 0 inferred from tool events.`
+- Modularized shell tool-plane rendering:
+  - extracted tool-plane formatting and rendering into `apps/web/src/tool-plane.js`
+  - wired `app.js` to use shared tool-plane renderers instead of adding more inline tool-plane logic
+  - added a dedicated inspector subsection (`#tool-registration-list`) for session registration evidence split by provider
+- Re-ran `npm run check`, `node --check apps/web/src/app.js`, and `node --check apps/web/src/tool-plane.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - served shell HTML contains the new `tool-registration-list` surface
+  - a real Qwen session snapshot returned provider-enumerated registrations that the new shell panel can render (`qwenRegisteredCount = 3`, `providerEnumeratedCount = 3`, `eventObservedCount = 0`)
+- Extracted inspector panel rendering into a focused module:
+  - added `apps/web/src/inspector-panels.js` for tool/checkpoint/approval panel rendering
+  - moved `renderTools`, `renderCheckpoints`, and `renderApprovals` in `app.js` to thin wrappers around module functions
+  - kept tool-plane-specific rendering in `tool-plane.js`, so panel orchestration and panel rendering now have a clearer boundary
+- Re-ran `npm run check`, `node --check apps/web/src/app.js`, `node --check apps/web/src/tool-plane.js`, and `node --check apps/web/src/inspector-panels.js`.
+- Re-ran the daemon on a clean port and confirmed:
+  - served `/app.js` imports both `inspector-panels.js` and `tool-plane.js`
+  - served shell HTML still includes the new registration evidence section and renders without startup errors
+- Replaced the shell's single-slot notice with a queue-based toast system inspired by Panes:
+  - added `apps/web/src/toasts.js` as a small plain-JS toast queue with bounded length, severity variants, timed dismissal, and manual close handling
+  - replaced the old `#app-notice` surface in `apps/web/src/index.html` with `#toast-container`
+  - updated `apps/web/src/app.js` so request failures now emit queued error toasts and transition-switch failures emit warning toasts without clearing prior notifications on every successful request
+  - added toast presentation styles to `apps/web/src/styles.css` while keeping the current daemon-served shell architecture unchanged
+- Re-ran validation after edits:
+  - `npm run check`
+  - `node --check apps/web/src/app.js`
+  - `node --check apps/web/src/toasts.js`
+- Extended the React shell quick-open into a grouped command layer:
+  - enriched `apps/web/src/components/QuickOpen.tsx` with group headers plus keyword-aware filtering across actions, sessions, and runs
+  - updated `apps/web/src/App.tsx` so quick-open now exposes direct shell actions (`create session`, `start`, `route`, `delegate`, `handoff`, `review`, `verify`, `recover`, `cancel`, `apply policy`) only when the current controller state allows them
+  - added a compact topbar shortcut strip for `Quick Open`, `Composer`, and `Focus View`, plus a new `Ctrl/Cmd+Shift+J` composer-focus shortcut
+  - expanded session/run search metadata so filtering now matches provider, workspace path, policy, orchestration/recovery labels, run status, and prompt text instead of only short ids
+- Re-ran validation after the quick-open shell slice:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - built web assets contain the new `command-strip`, `quick-open-group`, and `Ctrl/Cmd+Shift+J` shell surfaces
+  - re-ran the daemon on clean port `4211` and confirmed:
+    - `GET /` returned `200`
+    - `GET /api/runtime` still returned both provider ids (`qwen,gemini`)
+    - on this machine in that smoke run, `qwen` was available and `gemini` reported a pre-existing local command quoting failure on `--version`, so this slice did not re-assert dual-provider readiness beyond the unchanged API shape
+- Inspected Panes again as a frontend donor, this time against local shallow clone commit `58adc78f50ece0fc0ed827cf3a96fdbe4615f095`:
+  - `src/components/layout/ThreeColumnLayout.tsx`
+  - `src/components/shared/CommandPalette.tsx`
+  - `src/globals.css`
+- Applied a donor-style shell layout pass in Qwemini without changing controller or daemon contracts:
+  - updated `apps/web/src/App.tsx` to group the center and utility panes inside one `content-shell` while keeping the existing React/controller state flow intact
+  - updated `apps/web/src/styles.css` to shift from a card-dashboard look toward a Panes-like dark rail + unified content card, with compact signal chips, a subtler command strip, and joined center/right pane chrome
+  - kept all run/session/tool/approval interactions on the existing daemon-backed request paths
+- Re-ran validation after the donor-driven layout pass:
+  - `npm run build:web`
+  - `npm run check`
+  - built web assets contain the new `content-shell`, `signal-row`, `dock-column`, and `utility-shell` surfaces
+  - re-ran the daemon on clean port `4212` and confirmed:
+    - `GET /` returned `200`
+    - `GET /api/runtime` still returned both provider ids (`qwen,gemini`)
+- Tightened the donor-style shell into a more operational docked workspace without changing daemon contracts:
+  - updated `apps/web/src/App.tsx` with a persisted collapsible utility rail, direct keyboard cycling across left/run/utility views, and a quick-open action to toggle the utility surface
+  - updated `apps/web/src/styles.css` so `content-shell` directly owns the center + utility grid, collapsed utility mode renders compact utility selectors instead of a broken stacked column, and the right rail behaves like a proper docked surface on desktop and mobile
+  - kept all behavior on existing controller state and daemon-backed request paths
+- Re-ran validation after the utility-rail shell slice:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4215` and confirmed:
+    - `GET /` returned `200`
+    - `GET /api/runtime` returned the runtime payload normally
+    - on this machine in that smoke run, `qwen` was available and `gemini` still reported the pre-existing local `gemini.cmd --version` quoting failure, so this slice did not re-assert dual-provider readiness beyond the unchanged daemon route
+- Tightened the shell visual system without changing controller or daemon behavior:
+  - updated `apps/web/src/styles.css` so the docked shell reads as one operational workbench instead of stacked generic cards, with stronger pane chrome, denser summary/action/composer treatment, terminal-like transcript/message surfaces, and clearer utility-section hierarchy
+  - updated `apps/web/src/components/RecentSessionList.tsx` so recent sessions render as workspace-first operational cards with provider badges and compact metadata chips
+  - updated `apps/web/src/components/ToolActivityList.tsx`, `apps/web/src/components/ApprovalListPanel.tsx`, `apps/web/src/components/RunTranscriptPanel.tsx`, and `apps/web/src/components/RunMessagesPanel.tsx` so tools, approvals, and run outputs render with more explicit status and body hierarchy instead of flat generic rows
+- Re-ran validation after the shell visual-system slice:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4216` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - on this machine in that smoke run, `qwen` was available and `gemini` still reported the pre-existing local `gemini.cmd --version` quoting failure
+- Tightened shell interaction polish within the current React workbench without changing daemon or controller contracts:
+  - added a shared `apps/web/src/components/EmptyState.tsx` so run, archive, and utility panels now use one intentional empty-state surface instead of repeated one-line placeholders
+  - updated `apps/web/src/App.tsx` and `apps/web/src/components/TabBar.tsx` so the run header carries compact session/provider/view chips, the run toolbar is grouped into smaller operational clusters, and rail/run/utility tabs now expose separate styling hooks
+  - updated shell component panels and `apps/web/src/styles.css` so utility empties are more informative, rail selection is more obvious, run-detail tabs have stronger active/focus states, and keyboard-visible focus is clearer across tabs and cards
+- Re-ran validation after the shell interaction-polish slice:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4217` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - on this machine in that smoke run, `qwen` was available and `gemini` remained unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Replaced the previous dashboard-like shell direction with a closer Panes-derived layout reset:
+  - reworked `apps/web/src/App.tsx` into a thinner desktop frame with a top menu bar, a left project/session rail, a dominant center conversation pane, a right inspector rail, and the composer docked at the bottom of the center pane
+  - added flatter Panes-style shell overrides in `apps/web/src/styles.css`, removing much of the card-heavy chrome in favor of black rails, restrained borders, compact header controls, and a more literal donor-style spatial hierarchy
+  - kept the daemon/controller/API contracts unchanged while remapping the same session/run/utility surfaces into the new layout
+- Re-ran validation after the Panes-layout reset:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4218` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - on this machine in that smoke run, `qwen` was available and `gemini` remained unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Tightened the Panes-derived shell density after the layout reset:
+  - adjusted `apps/web/src/App.tsx` labels and shell framing so the left rail reads more like a Panes-style project/thread rail instead of a dashboard setup panel
+  - updated `apps/web/src/styles.css` to compress the left draft block, flatten rail tabs and session rows, widen the rail slightly, and make the composer/footer controls read more like Panes chat controls than stacked workflow cards
+  - kept the same React state flow, daemon routes, and provider behavior underneath
+- Re-ran validation after the donor-density pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4219` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - on this machine in that smoke run, `qwen` was available and `gemini` remained unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Tightened the shell again to address the remaining donor mismatch instead of continuing to polish the old dashboard shape:
+  - updated `apps/web/src/App.tsx` so the center pane now falls back to a sparse Panes-like empty conversation state when no session is active, while keeping the same daemon-backed composer and shell actions underneath
+  - updated `apps/web/src/styles.css` with a final donor-alignment override layer that suppresses older accent-heavy button styles, flattens menu/header/rail controls, darkens the shell chrome, and makes the composer read more like a docked conversation surface than a workflow card
+  - updated `apps/web/src/lib/use-shell-layout.ts` so fresh shells start with more donor-like default left/right rail widths
+- Re-ran validation after the donor-alignment refinement:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4221` and confirmed:
+    - `GET /api/runtime` returned the runtime payload normally
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Switched from approximate Panes styling to a more literal donor-driven shell port:
+  - inspected the local Panes donor clone again, specifically `src/components/layout/ThreeColumnLayout.tsx`, `src/components/sidebar/Sidebar.tsx`, `src/components/shared/CommandPalette.tsx`, and `src/globals.css`
+  - updated `apps/web/src/App.tsx` so the left rail now uses a more donor-like section hierarchy with a branded header row, compact project-section actions, primary project/session focus, and secondary rows for runs/archive/agents instead of treating every rail view as a top-level tab
+  - updated `apps/web/src/App.tsx` so the right rail header and navigation read more like a Panes inspector frame, while still binding to the same Qwemini utility state and daemon-backed actions
+  - appended a direct donor refinement layer to `apps/web/src/styles.css` so the sidebar, content card, composer, and inspector use flatter Panes-like control surfaces and spacing instead of inheriting older dashboard chrome
+  - updated `apps/web/src/lib/use-shell-layout.ts` so fresh shells default to more donor-like rail proportions
+- Re-ran validation after the direct donor-port shell slice:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4222` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Continued the donor-port path into the list/body details instead of stopping at the shell frame:
+  - updated `apps/web/src/components/RecentSessionList.tsx`, `RunHistoryList.tsx`, `ArchiveSessionList.tsx`, and `OrchestrationFlowBoard.tsx` so left-rail rows now use a more literal donor-style project/thread anatomy instead of generic stacked cards
+  - updated `apps/web/src/components/ApprovalListPanel.tsx`, `ToolActivityList.tsx`, `ToolRegistrationEvidenceList.tsx`, `ArtifactListPanel.tsx`, and `CheckpointListPanel.tsx` so the right rail body reads more like a restrained Changes panel with flatter inspector cards and denser metadata
+  - updated `apps/web/src/styles.css` to add the matching donor-style rail row and inspector body overrides while keeping the same React/controller/daemon behavior underneath
+- Re-ran validation after the donor row/body slice:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4223` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Shifted the center pane toward the Panes terminal-style donor layout instead of leaving it as a chat-card surface:
+  - updated `apps/web/src/App.tsx` so the run-view tabs now read as `Terminal`, `Output`, and `Events`, and the center tab strip includes a donor-style inline terminal action
+  - updated `apps/web/src/components/RunTranscriptPanel.tsx`, `RunMessagesPanel.tsx`, and `RunTimelinePanel.tsx` so center output renders as flatter mono terminal lines rather than card-like timeline blocks
+  - appended a terminal-style override layer to `apps/web/src/styles.css` so the center pane uses a flatter black canvas, donor-like tab strip spacing, mono line rendering, and a tighter integrated composer/footer
+- Re-ran validation after the center-pane terminal slice:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4224` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Tightened the center pane again toward the donor's exact spacing and footer layout:
+  - updated `apps/web/src/App.tsx` so the run/session/provider status strip now sits at the bottom of the center pane instead of above the terminal canvas
+  - updated `apps/web/src/styles.css` so the center header, tab strip, run canvas, composer, and bottom status bar use tighter donor-like proportions rather than the earlier slightly roomier approximation
+- Re-ran validation after the terminal spacing/footer pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4225` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Tightened the top header controls into a donor-style compact icon group:
+  - updated `apps/web/src/App.tsx` so the center header actions no longer render as labeled buttons and instead expose the same actions through a compact icon-only control cluster
+  - updated `apps/web/src/styles.css` so those header controls use tighter donor-like sizing, active states, and simple inline glyphs instead of text labels
+- Re-ran validation after the compact header-controls pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4226` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Flattened the remaining center and inspector headers into a more literal donor-style single-row rhythm:
+  - updated `apps/web/src/App.tsx` so the center breadcrumb row now carries the no-session note inline, the old compact subline is suppressed, and the inspector header uses an inline note plus a glyph-only collapse control
+  - updated `apps/web/src/styles.css` so the center header and inspector header both use 48px single-row alignment, nowrap header content, and the same restrained donor-style spacing instead of the earlier stacked header feel
+- Re-ran validation after the single-row header pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4229` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Tightened the remaining donor mismatch in the center tab strip and inspector body density:
+  - updated `apps/web/src/components/TabBar.tsx` so tab labels have explicit overflow handling for donor-style narrow tab bars
+  - updated `apps/web/src/components/ApprovalListPanel.tsx`, `ToolActivityList.tsx`, `ArtifactListPanel.tsx`, `CheckpointListPanel.tsx`, and `ToolRegistrationEvidenceList.tsx` so the right rail renders flatter change-list rows with compact title/meta groupings and truncated inline previews instead of heavier stacked cards
+  - updated `apps/web/src/styles.css` so the utility tabs read like a flat git-style tab strip, utility rows use divider-based list density, and the center tab strip keeps the tighter donor terminal rhythm
+- Re-ran validation after the utility-density and tab-rhythm pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4230` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Tightened the left rail and bottom dock toward the donor's project-rail and chat-composer proportions:
+  - updated `apps/web/src/App.tsx` so the sidebar uses a compact action stack plus a flatter setup block, and the composer footer now splits into a donor-style pill control row with a dedicated circular send action
+  - updated `apps/web/src/styles.css` so session setup fields render like compact project-rail controls instead of a settings card, while the composer becomes a denser bottom dock with smaller pills, tighter spacing, and a round send button
+- Re-ran validation after the left-rail and composer-dock pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4231` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Tightened the left-rail tree rhythm and compressed the bottom dock controls another step toward the donor:
+  - updated `apps/web/src/components/RecentSessionList.tsx`, `RunHistoryList.tsx`, `ArchiveSessionList.tsx`, and `OrchestrationFlowBoard.tsx` so project/session/run/archive/flow rows now use flatter tree-style title, badge, and subline groupings instead of broader card-like metadata blocks
+  - updated `apps/web/src/styles.css` so the left rail uses tighter row gaps, active-edge indicators, flatter badges, deeper thread indentation, and lighter flow headers, while the composer dock trims chip/button spacing and control prominence
+- Re-ran validation after the left-rail tree and dock-density pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4232` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Simplified the center blank-state and bottom dock toward the donor's "empty canvas plus compact input" interaction:
+  - updated `apps/web/src/App.tsx` so the composer no longer renders a separate metrics/shortcut header block and instead folds that information into a tighter footer meta row, while the empty-state icon gets an explicit glyph hook
+  - updated `apps/web/src/styles.css` so the center empty-state is smaller and quieter, the composer footer metadata sits inline with the dock controls, and the bottom action pills plus send button use tighter donor-style sizing
+- Re-ran validation after the center empty-state and dock simplification pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4233` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Tightened the remaining frame-spacing fidelity without changing shell behavior:
+  - updated `apps/web/src/lib/use-shell-layout.ts` so fresh workspaces start closer to the donor's left/right rail proportions
+  - updated `apps/web/src/styles.css` so the workbench uses thinner resize seams, tighter sidebar section padding, slimmer center/inspector header gutters, and slightly tighter utility/canvas scroll padding
+- Re-ran validation after the frame-spacing fidelity pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4234` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Fixed the remaining collapsed-inspector and oversized-type issues visible in the shell:
+  - updated `apps/web/src/App.tsx` so the right inspector header hides its title block while collapsed instead of rendering truncated header text into the narrow rail
+  - updated `apps/web/src/styles.css` so the collapsed inspector rail is materially narrower with centered compact mini-buttons, and reduced the shell type scale for the top menu, sidebar actions, center header, empty-state title, tabs, inspector heading, and composer textarea
+- Re-ran validation after the collapsed-right-rail and font-scale pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4235` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Flattened the middle-pane palette to match the donor's neutral black stack instead of the earlier blue-tinted workspace blend:
+  - updated `apps/web/src/styles.css` so the workspace canvas, content shell, main pane, run surface, view header, and composer dock all use the same neutral near-black family instead of mixed teal/blue gradients
+- Re-ran validation after the center-palette pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4236` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Removed the last blue center gradients that were still winning over the neutral donor palette:
+  - updated `apps/web/src/styles.css` so the shared `.panel-inner` background and the more-specific `.run-surface.panel-inner` override both use neutral near-black fills instead of the earlier blue-tinted gradients
+- Re-ran validation after removing the legacy center gradients:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4237` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned provider ids `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Fixed the dark-theme mismatch in native dropdown popups for the shell session controls:
+  - updated `apps/web/src/styles.css` so the document and all native `select` controls opt into dark color-scheme rendering
+  - added explicit dark `option` / `optgroup` styling so provider and policy dropdown menus no longer open with bright Windows-native colors against the donor shell
+- Re-ran validation after the native-select dark-theme pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4239` and confirmed:
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable because of the same pre-existing local `gemini.cmd --version` quoting failure
+- Completed a final frontend cleanup wrap-up before switching back to system work:
+  - updated `apps/web/src/App.tsx` to remove the obsolete `panel-inner` class from the run surface now that the donor shell uses `panes-run-surface` directly
+  - updated `apps/web/src/styles.css` to delete the dead `.panel-inner`, `.run-surface.panel-inner`, and unused `.panes-composer-header` rules left behind by the layered donor-port passes
+  - aligned the loop queue so the next bounded slice returns to typed shell/daemon contract cleanup instead of more shell restyling
+- Re-ran validation after the final frontend cleanup wrap-up:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4240` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Replaced the remaining ad hoc controller fetch seam with a typed daemon API helper backed by protocol-owned response models:
+  - added `apps/web/src/lib/daemon-api.ts` as the single JSON request helper for the shell, with typed route methods for runtime, sessions, runs, approvals, archive, tool-plane, and orchestration endpoints plus shared daemon error extraction
+  - rewired `apps/web/src/app-controller.ts` to create and use that helper instead of an inline untyped `request(...)` wrapper
+  - updated `apps/web/src/lib/controller-runtime-session-flows.ts`, `apps/web/src/lib/controller-run-action-flows.ts`, and `apps/web/src/lib/controller-run-stream-flows.ts` to consume typed protocol route responses directly instead of `Promise<any>` payloads
+  - updated `apps/web/src/lib/controller-shell-state.ts`, `apps/web/src/lib/controller-bootstrap-helpers.ts`, and `apps/web/src/lib/controller-ui-sync.ts` so their daemon-backed state fields now use protocol-owned runtime/session/run/tool-plane types instead of broad `any`
+- Re-ran validation after the typed daemon API seam pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4241` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Tightened the remaining controller-side draft and helper typing so the web shell no longer carries `any` in source:
+  - updated `apps/web/src/lib/shell-controls-state.ts` to use protocol-owned `ProviderId`, `ApprovalPolicy`, `RoutingToolRequirement`, and delegate-role types for shell draft/control state
+  - updated `apps/web/src/lib/controller-shell-state.ts`, `apps/web/src/lib/controller-requesters.ts`, `apps/web/src/lib/controller-bridge.ts`, and `apps/web/src/lib/controller-run-action-flows.ts` so controller draft state and requester signatures line up with those protocol-owned enums end to end
+  - updated `apps/web/src/App.tsx` to localize DOM-string parsing for provider, approval-policy, and delegate-role selects at the React edge instead of leaking raw strings through the controller
+  - updated `apps/web/src/lib/controller-state-mappers.ts` to remove the last `any[]` helper in favor of `unknown[]`
+- Re-ran validation after the controller draft typing pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `rg -n "\bany\b" apps/web/src -g '!dist'` returned no matches
+  - re-ran the daemon on clean port `4242` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Reduced duplicated stringly-typed view-model declarations by reusing protocol-owned enums in the shell state layer:
+  - updated `apps/web/src/lib/run-view-state.ts` so `RunSummary.status` and `RunEvent.type` now use protocol `RunStatus` and `WorkbenchEventType`
+  - updated `apps/web/src/lib/shell-panels-state.ts` so session, orchestration, recovery, approval, tool-invocation, tool-registration, tool-plane, and selected-provider fields now use protocol-owned enums like `ProviderId`, `ApprovalPolicy`, `RunStatus`, `ApprovalStatus`, `RoutingToolRequirement`, and `ToolPlaneScope`
+  - updated `apps/web/src/lib/controller-state-mappers.ts` to validate and map those protocol enums explicitly instead of passing through raw strings
+  - updated `apps/web/src/components/RunHistoryList.tsx`, `apps/web/src/components/ArchiveSessionList.tsx`, `apps/web/src/components/OrchestrationFlowBoard.tsx`, and `apps/web/src/components/ToolRegistrationEvidenceList.tsx` so their props and grouped evidence types align with the stronger view-model types
+- Re-ran validation after the protocol-enum view-model pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4243` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Simplified the remaining shell view-state duplication by replacing hand-declared protocol subsets with lighter protocol-based aliases:
+  - updated `apps/web/src/lib/run-view-state.ts` so `RunSummary` and `RunEvent` are now protocol `Pick<>` projections instead of repeated manual field declarations
+  - updated `apps/web/src/lib/shell-panels-state.ts` so session/orchestration/recovery/archive/approval/tool/tool-plane view types now use protocol `Pick<>` projections where the shell is consuming stable subsets directly, while preserving the intentionally nullable shell fields for tool activity and tool-plane scope
+  - kept `apps/web/src/lib/controller-state-mappers.ts` behavior unchanged while aligning it to those lighter alias definitions
+- Re-ran validation after the protocol-alias simplification pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4244` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Converted the highest-traffic shared shell helpers from untyped JavaScript to typed TypeScript:
+  - replaced `apps/web/src/shell-status-summary.js` with `apps/web/src/shell-status-summary.ts`, typing the shared run/session/provider formatting helpers and note builders used across `App.tsx` and the controller flow modules
+  - replaced `apps/web/src/tool-plane.js` with `apps/web/src/tool-plane.ts`, typing the shared tool-plane summary formatter against the protocol snapshot shape
+  - kept import specifiers stable (`.js`) so no route or bundling behavior changed, while allowing the TS resolver to pick up the stronger source files
+- Re-ran validation after the shared-helper TypeScript conversion:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `rg --files apps/web/src | rg "\.js$"` returned no matches
+  - re-ran the daemon on clean port `4245` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Simplified the hottest remaining shell projection layer so controller view-state mapping now projects directly from typed protocol entities:
+  - updated `apps/web/src/lib/controller-state-mappers.ts` to accept typed protocol runs, events, sessions, archive summaries, orchestration summaries, approvals, checkpoints, artifacts, tool activity, and tool-plane snapshots directly instead of re-validating top-level daemon payload shapes
+  - kept `unknown` parsing only for intentionally open-ended nested metadata fields such as approval payload metadata and session tool registration metadata
+  - aligned the mapper output to the lighter protocol-based aliases already defined in `apps/web/src/lib/run-view-state.ts` and `apps/web/src/lib/shell-panels-state.ts`
+- Re-ran validation after the typed protocol projection pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4247` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Next bounded slice:
+  - collapse the remaining shell-only projection aliases where stable protocol-owned shapes can be consumed directly by component props, without changing daemon routes or shell UX
+- Collapsed the remaining component-facing shell projection aliases so React panels now type against the shared state objects directly instead of importing duplicate item view aliases:
+  - updated `apps/web/src/components/RunHistoryList.tsx`, `RunTranscriptPanel.tsx`, `RunMessagesPanel.tsx`, and `RunTimelinePanel.tsx` to consume `RunViewState` indexed types directly
+  - updated `apps/web/src/components/RecentSessionList.tsx`, `ArchiveSessionList.tsx`, `OrchestrationFlowBoard.tsx`, `ApprovalListPanel.tsx`, `CheckpointListPanel.tsx`, `ArtifactListPanel.tsx`, `ToolActivityList.tsx`, and `ToolRegistrationEvidenceList.tsx` to consume `ShellPanelsState` indexed types directly
+  - updated `apps/web/src/lib/run-view-state.ts`, `apps/web/src/lib/run-inspector-views.ts`, and `apps/web/src/lib/shell-panels-state.ts` so the state modules remain the exported type boundary while local item aliases stay internal
+  - aligned `apps/web/src/lib/controller-state-mappers.ts` to those state-indexed item types so the mapper stays in sync with the component-facing state surface
+- Re-ran validation after the component-facing state-boundary cleanup:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4248` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Next bounded slice:
+  - reduce the remaining local projection helpers inside `shell-panels-state.ts` and `controller-state-mappers.ts` where stable protocol subset types can be expressed once and reused without widening the exported shell surface
+- Reduced the remaining projection scaffolding inside the shell state/mappers so stable protocol subsets are expressed once and reused closer to the actual state surface:
+  - updated `apps/web/src/lib/shell-panels-state.ts` to factor repeated internal protocol subset shapes into shared local projections for sessions, run summaries, and tool-plane snapshots while keeping the exported boundary limited to `ShellPanelsState`
+  - updated `apps/web/src/lib/controller-state-mappers.ts` so the mapper functions now return `RunViewState[...]` and `ShellPanelsState[...]` indexed item types directly instead of carrying a second local alias layer for every projected view item
+  - kept the remaining open-ended metadata parsing behavior unchanged so this slice stayed structural only
+- Re-ran validation after the internal projection reuse pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4249` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Next bounded slice:
+  - clean up the remaining nested metadata helper typing in `controller-state-mappers.ts` so approval and session-tool metadata projections stay readable without reintroducing duplicate exported view aliases
+- Cleaned up the remaining nested metadata helper typing in `controller-state-mappers.ts` so approval and session-tool metadata projections stay readable without expanding the exported shell state surface:
+  - added a tiny local alias layer in `apps/web/src/lib/controller-state-mappers.ts` for approval payload metadata, approval suggestions, tool-plane snapshots, and session-tool registration metadata
+  - rewired the approval and session-tool metadata projection helpers to use those focused local aliases instead of repeated multi-line `NonNullable<...>` chains
+  - kept runtime behavior unchanged; this was readability and maintainability only
+- Re-ran validation after the nested metadata typing cleanup:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - re-ran the daemon on clean port `4250` and confirmed:
+    - `GET /` returned `200`
+    - served HTML still contains `<div id="root"></div>`
+    - `GET /api/runtime` still returned providers `qwen,gemini`
+    - runtime still reported `qwen` as available
+    - runtime still reported `gemini` as unavailable on this machine
+- Next bounded slice:
+  - tighten the remaining web-controller type surface around helper inputs and callback signatures where protocol-owned route/state shapes can be referenced directly, without changing daemon routes or shell UX
+- Ran a real usability pass against the daemon instead of only health and build checks:
+  - confirmed the Qwen path can create a session, start a real run, complete normally, emit run events, and produce artifacts/tool-ledger entries from a daemon-owned prompt against this repo
+  - fixed the Windows Gemini launch resolver in `packages/providers/gemini/src/index.ts` so global installs that expose `bundle/gemini.js` resolve through the direct Node entrypoint path instead of falling back to broken `.cmd --version` probing
+  - re-validated runtime health after that fix and confirmed `GET /api/runtime` now reports both `qwen` and `gemini` as available on this machine
+  - confirmed both providers can complete a real file-writing task in `C:\Users\User\projects\qwemini\.qwemini\usability-sandbox` through the daemon-owned run/session flow
+  - confirmed a manual-approval Qwen run enters `awaiting_approval`, accepts a daemon approval decision through `/api/approvals/:id/resolve`, then resumes and completes with the requested file written
+- Re-ran validation after the Gemini Windows usability fix and end-to-end workspace checks:
+  - `npm run build:web`
+  - `npm run check`
+  - `GET /api/runtime` on clean port `4252` returned providers `qwen,gemini` with both available
+  - real Gemini daemon run on clean port `4253` completed successfully for a read-only repo inspection prompt
+  - real Qwen and Gemini file-writing runs on clean port `4254` both completed successfully and wrote the requested files in the disposable sandbox workspace
+  - real Qwen manual-approval run on clean port `4255` paused for approval, resumed after approval resolution, and completed successfully with the requested file written
+- Fixed the broken first-run shell path where the composer and route flow behaved like static UI until a session was created manually:
+  - updated `apps/web/src/lib/controller-ui-sync.ts` so send/route enablement derives from the current draft workspace/provider when no session is selected, instead of hard-disabling run controls on first load
+  - updated `apps/web/src/lib/controller-requesters.ts` so prompt and session-draft changes resync send availability, not only route availability
+  - updated `apps/web/src/lib/controller-run-action-flows.ts` so `startRun()` creates a session from the current draft state when needed, `routePrompt()` works with `sessionId: null`, and recommendation previews can run from draft workspace state without a selected session
+- Re-ran validation after the first-run shell usability fix:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - verified with a direct controller runtime script that first-run send now issues `createSession` followed by `startRun`, clears the prompt draft, and selects the new session
+  - verified with a direct controller runtime script that first-run send and route controls become enabled from draft workspace/provider state with an available provider
+  - verified with a direct controller runtime script that recommendation and route calls can execute with `sessionId: null` while using the draft workspace/provider state
+- Added a deterministic shell usability validation script so the just-fixed first-run composer path is now checked in-repo instead of relying on ad hoc manual scripts:
+  - added `scripts/validate-shell-usability.ts`
+  - added `npm run check:shell`
+  - the validation covers:
+    - first-run send/route controls enabling from draft workspace/provider state
+    - requester-driven resync of send availability after prompt/session draft edits
+    - session-on-demand run creation when sending without a selected session
+    - recommendation and route calls with `sessionId: null` while using draft workspace/provider state
+- Re-ran validation after adding deterministic shell usability coverage:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Tightened the remaining repeated web-controller helper contracts so callback and requester signatures are now expressed once instead of drifting across the bridge and flow modules:
+  - added `apps/web/src/lib/controller-contracts.ts`
+  - moved shared controller callback contracts into that module, including:
+    - approval resolution decisions
+    - session draft patch shape
+    - requester-map shape
+    - shared async callback types for archive load, recommendation refresh, run/session selection, session transition, recovery, and run/session actions
+  - updated `apps/web/src/lib/controller-bridge.ts`, `controller-requesters.ts`, `controller-run-action-flows.ts`, `controller-run-stream-flows.ts`, `controller-runtime-session-flows.ts`, and `controller-bootstrap-helpers.ts` to consume those shared contracts instead of repeating local function signatures
+- Re-ran validation after the controller contract unification pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Reduced the remaining duplicated shell-local state slice declarations across controller helper modules so controller helpers now project from `ShellState` instead of re-declaring local subset types:
+  - added `apps/web/src/lib/controller-state-slices.ts`
+  - defined shared `Pick<ShellState, ...>` aliases for:
+    - UI sync state
+    - requester draft state
+    - run action state
+    - runtime/session flow state
+    - run stream state
+    - bootstrap helper state
+  - updated `apps/web/src/lib/controller-ui-sync.ts`, `controller-requesters.ts`, `controller-run-action-flows.ts`, `controller-runtime-session-flows.ts`, `controller-run-stream-flows.ts`, and `controller-bootstrap-helpers.ts` to consume those shared state projections instead of maintaining duplicated local state-shape declarations
+- Re-ran validation after the controller state-slice consolidation pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Improved the main composer usability so the shell's primary action is obvious instead of hidden in a tiny unlabeled icon:
+  - updated `apps/web/src/App.tsx` so the composer now:
+    - shows explicit send guidance
+    - treats `Enter` as send and `Shift+Enter` as newline
+    - uses a visible `Send` primary button with text instead of an icon-only control
+    - clarifies the empty-state guidance so users know they can type below and send
+  - updated `apps/web/src/styles.css` so the send action reads as the main composer action, with clearer spacing and a larger labeled button
+- Re-ran validation after the composer usability pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Improved the run conversation readability so streamed output no longer appears as token-by-token fragments:
+  - updated `apps/web/src/lib/run-inspector-views.ts` to build grouped conversation blocks from the run prompt, streamed deltas, and final assistant messages
+  - updated `apps/web/src/components/RunTranscriptPanel.tsx` and `RunMessagesPanel.tsx` so the run views render readable paragraph blocks, include the original user prompt, and treat thinking as its own visual role
+  - updated `packages/providers/qwen/src/index.ts` so Qwen thinking deltas are normalized with `stream: 'thinking'` instead of being merged into normal assistant output
+  - updated `apps/web/src/styles.css` so assistant output, user prompts, and thinking blocks use distinct visual treatment, with thinking muted closer to Claude Code-style subdued reasoning text
+- Re-ran validation after the transcript readability pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Simplified the main run surface so it looks and behaves more like a coding-agent thread view instead of duplicate terminal/output panes:
+  - updated `apps/web/src/App.tsx` so the run tabs are now `Chat` and `Events`, removing the duplicate `Terminal` / `Output` split from the primary surface
+  - kept the grouped conversation renderer as the single main chat surface, with quick-open and run-tab wiring aligned to the new naming
+  - updated `apps/web/src/styles.css` so the center thread styling is calmer and more Codex/Claude-like, with:
+    - less terminal chrome
+    - assistant text as clean paragraphs
+    - user messages in a subtler bubble
+    - thinking text muted and secondary
+- Re-ran validation after the chat-view consolidation pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check:shell`
+- Simplified the composer action hierarchy so secondary orchestration actions no longer compete visually with the main chat/send flow:
+  - updated `apps/web/src/App.tsx` to move `Route`, `Delegate`, and `Handoff` behind a compact composer actions menu, while keeping `Send` as the visible primary action
+  - kept delegate role selection inside that secondary menu so orchestration controls stay available without dominating the composer footer
+  - updated `apps/web/src/styles.css` to add the compact actions trigger and popover styling, closer to Codex/Claude secondary-action patterns
+- Re-ran validation after the composer action hierarchy pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Shifted the composer footer closer to Codex-style control semantics while reusing Qwemini’s existing provider and approval model:
+  - updated `apps/web/src/App.tsx` so the footer now shows:
+    - a `+` menu for thread config
+    - a visible `Model` pill backed by Qwemini provider selection (`Qwen` / `Gemini`)
+    - a visible permissions/access pill backed by Qwemini approval policy
+    - a quieter meta row that emphasizes send guidance and current thread context instead of approvals/tools/artifacts counters
+  - updated `apps/web/src/styles.css` to style the `+` menu and the model/access pills closer to Codex footer controls
+- Re-ran validation after the Codex-style footer control pass:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check:shell`
+- Pushed the center thread and composer another step closer to Codex while still mapping to Qwemini's provider and approval model:
+  - updated `apps/web/src/App.tsx` so:
+    - the main run tab is now `Thread` instead of `Chat`
+    - provider and access are rendered as Codex-like pill menus instead of native footer selects
+    - active-thread provider stays visible as a locked pill once the thread is pinned
+    - advanced actions (`Route Prompt`, `Delegate`, `Handoff`, delegate role) now live inside the `+` menu instead of taking a separate footer slot
+    - the bottom footer strip now presents a simpler local/access/provider status row instead of exposing run/session/orchestrator chips
+  - updated `apps/web/src/components/RunTranscriptPanel.tsx` so assistant and user transcript items no longer render noisy per-message headers, while thinking remains visibly separate
+  - updated `apps/web/src/styles.css` so:
+    - the thread view reads more like Codex, with assistant paragraphs, compact user bubbles, and muted thinking blocks
+    - the composer footer uses pill menus and tighter bottom-bar spacing closer to Codex
+    - the `+` menu now holds the advanced orchestration controls in a cleaner popover section
+- Re-ran validation after the Codex-style thread/composer refinement:
+  - `npm run build:web`
+  - `npm run check`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Tightened the remaining Codex-style shell presentation gaps in the main thread and right inspector:
+  - updated `apps/web/src/styles.css` so user messages render on the right side again, closer to Codex thread layout, while assistant output remains left-aligned and thinking stays muted gray
+  - updated `apps/web/src/styles.css` so the right utility rail now uses denser Codex-like presentation:
+    - a calmer inspector header
+    - compact utility chips instead of flatter donor tabs
+    - darker rounded utility cards instead of divider-only rows
+    - tighter inspector preview blocks and approval/tool cards
+- Re-ran validation after the Codex-style thread-side and right-rail refinement:
+  - `npm run build:web`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Tightened the composer input surface itself so it reads closer to Codex instead of a terminal textarea:
+  - updated `apps/web/src/App.tsx` so the composer placeholder now reads like a Codex-style follow-up prompt
+  - updated `apps/web/src/styles.css` so the composer uses:
+    - a larger rounded input container
+    - sans-serif prompt text instead of terminal-style mono typing
+    - calmer placeholder and footer text
+    - a less terminal-like chat input surface overall
+- Re-ran validation after the Codex-style composer input refinement:
+  - `npm run build:web`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Tightened the left rail toward a more Codex-like workspace/thread sidebar without changing shell behavior:
+  - updated `apps/web/src/App.tsx` so the main left-rail section label is now `Threads` instead of the older project-oriented wording
+  - updated `apps/web/src/components/RecentSessionList.tsx` and `ArchiveSessionList.tsx` so thread/workspace rows are simpler and less metadata-heavy, with the most important thread state shown inline
+  - updated `apps/web/src/styles.css` so the left rail now has:
+    - denser top actions
+    - softer setup-panel chrome
+    - calmer thread/workspace rows
+    - a more Codex-like navigation hierarchy for thread lists and section switches
+- Re-ran validation after the Codex-style left-rail refinement:
+  - `npm run build:web`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Tightened the remaining top-shell and utility-header presentation toward the Codex reference:
+  - updated `apps/web/src/App.tsx` so the top shell bar now reads like a workspace header (`qwemini`, current workspace, more button) instead of a menu mock, and the right rail heading now uses `Context`
+  - updated `apps/web/src/styles.css` so:
+    - the top shell bar has calmer status pills and stronger workspace-title treatment
+    - center header icon actions use tighter square Codex-like controls
+    - the inspector context chip and collapse control read more like the same shell family
+- Re-ran validation after the Codex-style top/header refinement:
+  - `npm run build:web`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Tightened the remaining left-rail and top-shell chrome that still felt too much like a custom dashboard:
+  - updated `apps/web/src/App.tsx` to remove the top runtime/provider status pills from the shell bar
+  - updated `apps/web/src/styles.css` so the active shell now uses:
+    - a narrower left rail
+    - flatter top actions
+    - denser thread rows
+    - softer setup-panel chrome
+    - less boxed and less admin-like left/sidebar treatment overall
+- Re-ran validation after the left-rail/top-shell cleanup pass:
+  - `npm run build:web`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Applied a more literal Codex-style layout rewrite across the four shell surfaces that still felt structurally off:
+  - updated `apps/web/src/App.tsx` so the top shell bar now uses a desktop-style menu row (`File`, `Edit`, `View`, `Window`, `Help`) plus a separate workspace context cluster, closer to the Codex desktop framing
+  - updated `apps/web/src/styles.css` so the active shell now uses:
+    - a flatter, narrower left rail with lighter top actions and denser thread rows
+    - a more centered main thread column with calmer spacing and message rhythm
+    - a quieter composer arrangement that hides the extra meta row and reads more like one Codex input surface
+    - a tighter utility tab/header presentation so the shell reads as one consistent desktop workspace
+- Re-ran validation after the literal Codex-style layout rewrite:
+  - `npm run build:web`
+  - `npm run check -w @qwemini/web`
+  - `npm run check:shell`
+- Next bounded slice:
+  - frontend donor alignment is in a good stopping state; return to the paused controller/helper cleanup track or the next highest-ROI system reliability slice

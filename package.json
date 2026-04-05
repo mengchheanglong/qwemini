@@ -1,0 +1,24 @@
+{
+  "name": "qwemini",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/providers/*"
+  ],
+  "scripts": {
+    "dev": "npm run build:web && tsx apps/daemon/src/index.ts",
+    "dev:web": "npm run dev -w @qwemini/web",
+    "build:web": "npm run build -w @qwemini/web",
+    "check": "tsc --noEmit",
+    "check:shell": "tsx scripts/validate-shell-usability.ts",
+    "check:registrations": "node scripts/validate-registration-signals.mjs",
+    "check:registrations:json": "node scripts/validate-registration-signals.mjs --summary-json artifacts/registration-summary.json"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3"
+  }
+}

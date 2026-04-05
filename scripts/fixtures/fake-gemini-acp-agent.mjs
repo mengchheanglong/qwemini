@@ -1,0 +1,181 @@
+import * as acp from '@agentclientprotocol/sdk';
+import { randomUUID } from 'node:crypto';
+import { Readable, Writable } from 'node:stream';
+
+const args = process.argv.slice(2);
+const toolTitles = (process.env.QWEMINI_FAKE_GEMINI_TOOL_TITLES ?? 'run_shell_command')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+const shouldFailMcpList =
+  process.env.QWEMINI_FAKE_GEMINI_MCP_LIST_FAIL === '1' ||
+  process.env.QWEMINI_FAKE_GEMINI_MCP_LIST_FAIL === 'true';
+const shouldTimeoutMcpList =
+  process.env.QWEMINI_FAKE_GEMINI_MCP_LIST_TIMEOUT === '1' ||
+  process.env.QWEMINI_FAKE_GEMINI_MCP_LIST_TIMEOUT === 'true';
+const mcpListTimeoutMs = Math.max(
+  1000,
+  Number(process.env.QWEMINI_FAKE_GEMINI_MCP_LIST_TIMEOUT_MS ?? 5000) || 5000,
+);
+
+function buildRawInput(toolName) {
+  if (toolName === 'run_shell_command') {
+    return { command: 'echo deterministic' };
+  }
+
+  if (toolName === 'read_file') {
+    return { path: 'README.md' };
+  }
+
+  if (toolName.startsWith('mcp__')) {
+    return { query: 'deterministic probe' };
+  }
+
+  return {};
+}
+
+function handleCommandMode() {
+  if (args.includes('--version')) {
+    process.stdout.write('0.0.0-fake-gemini\n');
+    process.exit(0);
+    return true;
+  }
+
+  if (args.includes('--help')) {
+    process.stdout.write('Usage: fake-gemini-acp-agent --acp\n');
+    process.stdout.write('Options:\n  --acp   Start ACP mode\n');
+    process.exit(0);
+    return true;
+  }
+
+  if (args[0] === 'mcp' && args[1] === 'list') {
+    if (shouldFailMcpList) {
+      process.stderr.write('deterministic fake gemini mcp list failure\n');
+      process.exit(1);
+      return true;
+    }
+
+    if (shouldTimeoutMcpList) {
+      setTimeout(() => {
+        process.stdout.write('deterministic fake gemini mcp list timeout release\n');
+        process.exit(0);
+      }, mcpListTimeoutMs);
+      return true;
+    }
+
+    process.stdout.write('No MCP servers configured\n');
+    process.exit(0);
+    return true;
+  }
+
+  return false;
+}
+
+class FakeGeminiAgent {
+  constructor(connection) {
+    this.connection = connection;
+    this.sessions = new Map();
+  }
+
+  async initialize() {
+    return {
+      protocolVersion: acp.PROTOCOL_VERSION,
+      agentCapabilities: {
+        loadSession: false,
+        sessionCapabilities: {
+          resume: false,
+        },
+      },
+    };
+  }
+
+  async newSession() {
+    const sessionId = `fake-gemini-${randomUUID()}`;
+    this.sessions.set(sessionId, {
+      cancelled: false,
+    });
+    return { sessionId };
+  }
+
+  async prompt(params) {
+    const session = this.sessions.get(params.sessionId);
+    if (!session) {
+      throw new Error(`Unknown session ${params.sessionId}`);
+    }
+
+    if (session.cancelled) {
+      session.cancelled = false;
+      return { stopReason: 'cancelled' };
+    }
+
+    let index = 0;
+    for (const title of toolTitles) {
+      const toolCallId = `fake-tool-call-${index}`;
+      const rawInput = buildRawInput(title);
+
+      await this.connection.sessionUpdate({
+        sessionId: params.sessionId,
+        update: {
+          sessionUpdate: 'tool_call',
+          toolCallId,
+          title,
+          kind: 'execute',
+          status: 'pending',
+          rawInput,
+        },
+      });
+
+      await this.connection.sessionUpdate({
+        sessionId: params.sessionId,
+        update: {
+          sessionUpdate: 'tool_call_update',
+          toolCallId,
+          status: 'completed',
+          rawOutput: {
+            stdout: `deterministic-${title}`,
+          },
+        },
+      });
+
+      index += 1;
+    }
+
+    await this.connection.sessionUpdate({
+      sessionId: params.sessionId,
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: {
+          type: 'text',
+          text: 'Deterministic fake Gemini ACP response.',
+        },
+      },
+    });
+
+    return {
+      stopReason: 'end_turn',
+      usage: {
+        inputTokens: 1,
+        outputTokens: 1,
+      },
+    };
+  }
+
+  async cancel(params) {
+    const session = this.sessions.get(params.sessionId);
+    if (session) {
+      session.cancelled = true;
+    }
+  }
+}
+
+if (handleCommandMode()) {
+  // Command mode exits in place.
+} else if (args.includes('--acp')) {
+  const input = Writable.toWeb(process.stdout);
+  const output = Readable.toWeb(process.stdin);
+  const stream = acp.ndJsonStream(input, output);
+  new acp.AgentSideConnection((connection) => new FakeGeminiAgent(connection), stream);
+} else {
+  process.stderr.write(`fake-gemini-acp-agent received unsupported args: ${args.join(' ')}\n`);
+  process.exit(1);
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@qwemini/provider-gemini",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^0.18.0",
+    "@qwemini/protocol": "file:../../protocol"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

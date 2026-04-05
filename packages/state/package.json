@@ -1,0 +1,11 @@
+{
+  "name": "@qwemini/state",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@qwemini/protocol": "file:../protocol"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,934 @@
+{
+  "generatedAt": "2026-04-03T07:14:19.888Z",
+  "schemaVersion": 3,
+  "scenarioMatrix": {
+    "providers": [
+      "qwen",
+      "gemini"
+    ],
+    "expectedByScenario": {
+      "failure": {
+        "qwen": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "minimumRegistrationCount": 3,
+            "requiredToolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "run_shell_command": "shell",
+              "read_file": "workspace-read",
+              "mcp__docs__search": "mcp"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "qwen.system.tools"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "minimumRegistrationCount": 1,
+            "fallbackStatus": "failed",
+            "probeSurface": "qwen.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "minimumRegistrationCount": 0,
+            "disallowedToolNames": [
+              "just_list"
+            ]
+          }
+        },
+        "gemini": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "minimumRegistrationCount": 3,
+            "requiredToolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "run_shell_command": "shell",
+              "read_file": "workspace-read",
+              "mcp__docs__search": "mcp"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "gemini.acp.session_update.tool_call"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "minimumRegistrationCount": 1,
+            "fallbackStatus": "failed",
+            "probeSurface": "gemini.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "minimumRegistrationCount": 0,
+            "disallowedToolNames": [
+              "just_list"
+            ]
+          }
+        }
+      },
+      "timeout": {
+        "qwen": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "minimumRegistrationCount": 3,
+            "requiredToolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "run_shell_command": "shell",
+              "read_file": "workspace-read",
+              "mcp__docs__search": "mcp"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "qwen.system.tools"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "minimumRegistrationCount": 1,
+            "fallbackStatus": "timeout",
+            "probeSurface": "qwen.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "minimumRegistrationCount": 0,
+            "disallowedToolNames": [
+              "just_list"
+            ]
+          }
+        },
+        "gemini": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "minimumRegistrationCount": 3,
+            "requiredToolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "run_shell_command": "shell",
+              "read_file": "workspace-read",
+              "mcp__docs__search": "mcp"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "gemini.acp.session_update.tool_call"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "minimumRegistrationCount": 1,
+            "fallbackStatus": "timeout",
+            "probeSurface": "gemini.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "minimumRegistrationCount": 0,
+            "disallowedToolNames": [
+              "just_list"
+            ]
+          }
+        }
+      },
+      "mixed-qwen-timeout-gemini-failure": {
+        "qwen": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "minimumRegistrationCount": 3,
+            "requiredToolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "run_shell_command": "shell",
+              "read_file": "workspace-read",
+              "mcp__docs__search": "mcp"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "qwen.system.tools"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "minimumRegistrationCount": 1,
+            "fallbackStatus": "timeout",
+            "probeSurface": "qwen.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "minimumRegistrationCount": 0,
+            "disallowedToolNames": [
+              "just_list"
+            ]
+          }
+        },
+        "gemini": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "minimumRegistrationCount": 3,
+            "requiredToolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "run_shell_command": "shell",
+              "read_file": "workspace-read",
+              "mcp__docs__search": "mcp"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "gemini.acp.session_update.tool_call"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "minimumRegistrationCount": 1,
+            "fallbackStatus": "failed",
+            "probeSurface": "gemini.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "minimumRegistrationCount": 0,
+            "disallowedToolNames": [
+              "just_list"
+            ]
+          }
+        }
+      },
+      "mixed-qwen-failure-gemini-timeout": {
+        "qwen": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "minimumRegistrationCount": 3,
+            "requiredToolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "run_shell_command": "shell",
+              "read_file": "workspace-read",
+              "mcp__docs__search": "mcp"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "qwen.system.tools"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "minimumRegistrationCount": 1,
+            "fallbackStatus": "failed",
+            "probeSurface": "qwen.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "minimumRegistrationCount": 0,
+            "disallowedToolNames": [
+              "just_list"
+            ]
+          }
+        },
+        "gemini": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "minimumRegistrationCount": 3,
+            "requiredToolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "run_shell_command": "shell",
+              "read_file": "workspace-read",
+              "mcp__docs__search": "mcp"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "gemini.acp.session_update.tool_call"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "minimumRegistrationCount": 1,
+            "fallbackStatus": "timeout",
+            "probeSurface": "gemini.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "minimumRegistrationCount": 0,
+            "disallowedToolNames": [
+              "just_list"
+            ]
+          }
+        }
+      }
+    },
+    "observedByScenario": {
+      "failure": {
+        "qwen": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "registrationCount": 3,
+            "toolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "mcp__docs__search": "mcp",
+              "read_file": "workspace-read",
+              "run_shell_command": "shell"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "qwen.system.tools"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "registrationCount": 3,
+            "toolNames": [
+              "shell",
+              "workspace-read",
+              "workspace-write"
+            ],
+            "fallbackStatus": "failed",
+            "probeSurface": "qwen.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "registrationCount": 0,
+            "toolNames": []
+          }
+        },
+        "gemini": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "registrationCount": 3,
+            "toolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "mcp__docs__search": "mcp",
+              "read_file": "workspace-read",
+              "run_shell_command": "shell"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "gemini.acp.session_update.tool_call"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "registrationCount": 4,
+            "toolNames": [
+              "mcp",
+              "network",
+              "shell",
+              "workspace-read"
+            ],
+            "fallbackStatus": "failed",
+            "probeSurface": "gemini.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "registrationCount": 0,
+            "toolNames": []
+          }
+        }
+      },
+      "timeout": {
+        "qwen": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "registrationCount": 3,
+            "toolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "mcp__docs__search": "mcp",
+              "read_file": "workspace-read",
+              "run_shell_command": "shell"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "qwen.system.tools"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "registrationCount": 3,
+            "toolNames": [
+              "shell",
+              "workspace-read",
+              "workspace-write"
+            ],
+            "fallbackStatus": "timeout",
+            "probeSurface": "qwen.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "registrationCount": 0,
+            "toolNames": []
+          }
+        },
+        "gemini": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "registrationCount": 3,
+            "toolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "mcp__docs__search": "mcp",
+              "read_file": "workspace-read",
+              "run_shell_command": "shell"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "gemini.acp.session_update.tool_call"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "registrationCount": 4,
+            "toolNames": [
+              "mcp",
+              "network",
+              "shell",
+              "workspace-read"
+            ],
+            "fallbackStatus": "timeout",
+            "probeSurface": "gemini.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "registrationCount": 0,
+            "toolNames": []
+          }
+        }
+      },
+      "mixed-qwen-timeout-gemini-failure": {
+        "qwen": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "registrationCount": 3,
+            "toolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "mcp__docs__search": "mcp",
+              "read_file": "workspace-read",
+              "run_shell_command": "shell"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "qwen.system.tools"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "registrationCount": 3,
+            "toolNames": [
+              "shell",
+              "workspace-read",
+              "workspace-write"
+            ],
+            "fallbackStatus": "timeout",
+            "probeSurface": "qwen.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "registrationCount": 0,
+            "toolNames": []
+          }
+        },
+        "gemini": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "registrationCount": 3,
+            "toolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "mcp__docs__search": "mcp",
+              "read_file": "workspace-read",
+              "run_shell_command": "shell"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "gemini.acp.session_update.tool_call"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "registrationCount": 4,
+            "toolNames": [
+              "mcp",
+              "network",
+              "shell",
+              "workspace-read"
+            ],
+            "fallbackStatus": "failed",
+            "probeSurface": "gemini.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "registrationCount": 0,
+            "toolNames": []
+          }
+        }
+      },
+      "mixed-qwen-failure-gemini-timeout": {
+        "qwen": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "registrationCount": 3,
+            "toolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "mcp__docs__search": "mcp",
+              "read_file": "workspace-read",
+              "run_shell_command": "shell"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "qwen.system.tools"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "registrationCount": 3,
+            "toolNames": [
+              "shell",
+              "workspace-read",
+              "workspace-write"
+            ],
+            "fallbackStatus": "failed",
+            "probeSurface": "qwen.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "registrationCount": 0,
+            "toolNames": []
+          }
+        },
+        "gemini": {
+          "providerRuntime": {
+            "confirmedBy": "provider-runtime",
+            "registrationCount": 3,
+            "toolNames": [
+              "mcp__docs__search",
+              "read_file",
+              "run_shell_command"
+            ],
+            "requirementByTool": {
+              "mcp__docs__search": "mcp",
+              "read_file": "workspace-read",
+              "run_shell_command": "shell"
+            },
+            "registrationKind": "provider-enumeration",
+            "providerSurface": "gemini.acp.session_update.tool_call"
+          },
+          "providerCliFallback": {
+            "confirmedBy": "provider-cli",
+            "registrationCount": 4,
+            "toolNames": [
+              "mcp",
+              "network",
+              "shell",
+              "workspace-read"
+            ],
+            "fallbackStatus": "timeout",
+            "probeSurface": "gemini.mcp.list"
+          },
+          "eventObserved": {
+            "confirmedBy": "event-observed",
+            "registrationCount": 0,
+            "toolNames": []
+          }
+        }
+      }
+    },
+    "driftDetected": false,
+    "mismatches": []
+  },
+  "scenarios": [
+    {
+      "id": "failure",
+      "providers": {
+        "qwen": {
+          "runId": "ff2103c1-f300-49fd-8929-292716dff92d",
+          "requirements": [
+            "run_shell_command:shell",
+            "read_file:workspace-read",
+            "mcp__docs__search:mcp"
+          ],
+          "unclassifiedExcluded": "just_list",
+          "cliFallbackStatus": "failed",
+          "evidence": {
+            "providerRuntime": {
+              "confirmedBy": "provider-runtime",
+              "registrationCount": 3,
+              "toolNames": [
+                "mcp__docs__search",
+                "read_file",
+                "run_shell_command"
+              ],
+              "requirementByTool": {
+                "mcp__docs__search": "mcp",
+                "read_file": "workspace-read",
+                "run_shell_command": "shell"
+              },
+              "registrationKind": "provider-enumeration",
+              "providerSurface": "qwen.system.tools"
+            },
+            "providerCliFallback": {
+              "confirmedBy": "provider-cli",
+              "registrationCount": 3,
+              "toolNames": [
+                "shell",
+                "workspace-read",
+                "workspace-write"
+              ],
+              "fallbackStatus": "failed",
+              "probeSurface": "qwen.mcp.list"
+            },
+            "eventObserved": {
+              "confirmedBy": "event-observed",
+              "registrationCount": 0,
+              "toolNames": []
+            }
+          }
+        },
+        "gemini": {
+          "runId": "5975e9ce-cdff-4c45-a6bf-e7148ea85f57",
+          "requirements": [
+            "run_shell_command:shell",
+            "read_file:workspace-read",
+            "mcp__docs__search:mcp"
+          ],
+          "unclassifiedExcluded": "just_list",
+          "cliFallbackStatus": "failed",
+          "evidence": {
+            "providerRuntime": {
+              "confirmedBy": "provider-runtime",
+              "registrationCount": 3,
+              "toolNames": [
+                "mcp__docs__search",
+                "read_file",
+                "run_shell_command"
+              ],
+              "requirementByTool": {
+                "mcp__docs__search": "mcp",
+                "read_file": "workspace-read",
+                "run_shell_command": "shell"
+              },
+              "registrationKind": "provider-enumeration",
+              "providerSurface": "gemini.acp.session_update.tool_call"
+            },
+            "providerCliFallback": {
+              "confirmedBy": "provider-cli",
+              "registrationCount": 4,
+              "toolNames": [
+                "mcp",
+                "network",
+                "shell",
+                "workspace-read"
+              ],
+              "fallbackStatus": "failed",
+              "probeSurface": "gemini.mcp.list"
+            },
+            "eventObserved": {
+              "confirmedBy": "event-observed",
+              "registrationCount": 0,
+              "toolNames": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "timeout",
+      "providers": {
+        "qwen": {
+          "runId": "0b8394a7-75cf-47e2-9fd9-a36cffab21ce",
+          "requirements": [
+            "run_shell_command:shell",
+            "read_file:workspace-read",
+            "mcp__docs__search:mcp"
+          ],
+          "unclassifiedExcluded": "just_list",
+          "cliFallbackStatus": "timeout",
+          "evidence": {
+            "providerRuntime": {
+              "confirmedBy": "provider-runtime",
+              "registrationCount": 3,
+              "toolNames": [
+                "mcp__docs__search",
+                "read_file",
+                "run_shell_command"
+              ],
+              "requirementByTool": {
+                "mcp__docs__search": "mcp",
+                "read_file": "workspace-read",
+                "run_shell_command": "shell"
+              },
+              "registrationKind": "provider-enumeration",
+              "providerSurface": "qwen.system.tools"
+            },
+            "providerCliFallback": {
+              "confirmedBy": "provider-cli",
+              "registrationCount": 3,
+              "toolNames": [
+                "shell",
+                "workspace-read",
+                "workspace-write"
+              ],
+              "fallbackStatus": "timeout",
+              "probeSurface": "qwen.mcp.list"
+            },
+            "eventObserved": {
+              "confirmedBy": "event-observed",
+              "registrationCount": 0,
+              "toolNames": []
+            }
+          }
+        },
+        "gemini": {
+          "runId": "7157cd6f-ef15-4658-918e-ae405e80f945",
+          "requirements": [
+            "run_shell_command:shell",
+            "read_file:workspace-read",
+            "mcp__docs__search:mcp"
+          ],
+          "unclassifiedExcluded": "just_list",
+          "cliFallbackStatus": "timeout",
+          "evidence": {
+            "providerRuntime": {
+              "confirmedBy": "provider-runtime",
+              "registrationCount": 3,
+              "toolNames": [
+                "mcp__docs__search",
+                "read_file",
+                "run_shell_command"
+              ],
+              "requirementByTool": {
+                "mcp__docs__search": "mcp",
+                "read_file": "workspace-read",
+                "run_shell_command": "shell"
+              },
+              "registrationKind": "provider-enumeration",
+              "providerSurface": "gemini.acp.session_update.tool_call"
+            },
+            "providerCliFallback": {
+              "confirmedBy": "provider-cli",
+              "registrationCount": 4,
+              "toolNames": [
+                "mcp",
+                "network",
+                "shell",
+                "workspace-read"
+              ],
+              "fallbackStatus": "timeout",
+              "probeSurface": "gemini.mcp.list"
+            },
+            "eventObserved": {
+              "confirmedBy": "event-observed",
+              "registrationCount": 0,
+              "toolNames": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "mixed-qwen-timeout-gemini-failure",
+      "providers": {
+        "qwen": {
+          "runId": "ee60f9aa-35ba-43e7-9e64-0c781aea5c41",
+          "requirements": [
+            "run_shell_command:shell",
+            "read_file:workspace-read",
+            "mcp__docs__search:mcp"
+          ],
+          "unclassifiedExcluded": "just_list",
+          "cliFallbackStatus": "timeout",
+          "evidence": {
+            "providerRuntime": {
+              "confirmedBy": "provider-runtime",
+              "registrationCount": 3,
+              "toolNames": [
+                "mcp__docs__search",
+                "read_file",
+                "run_shell_command"
+              ],
+              "requirementByTool": {
+                "mcp__docs__search": "mcp",
+                "read_file": "workspace-read",
+                "run_shell_command": "shell"
+              },
+              "registrationKind": "provider-enumeration",
+              "providerSurface": "qwen.system.tools"
+            },
+            "providerCliFallback": {
+              "confirmedBy": "provider-cli",
+              "registrationCount": 3,
+              "toolNames": [
+                "shell",
+                "workspace-read",
+                "workspace-write"
+              ],
+              "fallbackStatus": "timeout",
+              "probeSurface": "qwen.mcp.list"
+            },
+            "eventObserved": {
+              "confirmedBy": "event-observed",
+              "registrationCount": 0,
+              "toolNames": []
+            }
+          }
+        },
+        "gemini": {
+          "runId": "f93085b4-f16a-4734-baa7-d306d2851aef",
+          "requirements": [
+            "run_shell_command:shell",
+            "read_file:workspace-read",
+            "mcp__docs__search:mcp"
+          ],
+          "unclassifiedExcluded": "just_list",
+          "cliFallbackStatus": "failed",
+          "evidence": {
+            "providerRuntime": {
+              "confirmedBy": "provider-runtime",
+              "registrationCount": 3,
+              "toolNames": [
+                "mcp__docs__search",
+                "read_file",
+                "run_shell_command"
+              ],
+              "requirementByTool": {
+                "mcp__docs__search": "mcp",
+                "read_file": "workspace-read",
+                "run_shell_command": "shell"
+              },
+              "registrationKind": "provider-enumeration",
+              "providerSurface": "gemini.acp.session_update.tool_call"
+            },
+            "providerCliFallback": {
+              "confirmedBy": "provider-cli",
+              "registrationCount": 4,
+              "toolNames": [
+                "mcp",
+                "network",
+                "shell",
+                "workspace-read"
+              ],
+              "fallbackStatus": "failed",
+              "probeSurface": "gemini.mcp.list"
+            },
+            "eventObserved": {
+              "confirmedBy": "event-observed",
+              "registrationCount": 0,
+              "toolNames": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "mixed-qwen-failure-gemini-timeout",
+      "providers": {
+        "qwen": {
+          "runId": "4d9b870a-64d3-4d06-ba91-7a42b6ba738a",
+          "requirements": [
+            "run_shell_command:shell",
+            "read_file:workspace-read",
+            "mcp__docs__search:mcp"
+          ],
+          "unclassifiedExcluded": "just_list",
+          "cliFallbackStatus": "failed",
+          "evidence": {
+            "providerRuntime": {
+              "confirmedBy": "provider-runtime",
+              "registrationCount": 3,
+              "toolNames": [
+                "mcp__docs__search",
+                "read_file",
+                "run_shell_command"
+              ],
+              "requirementByTool": {
+                "mcp__docs__search": "mcp",
+                "read_file": "workspace-read",
+                "run_shell_command": "shell"
+              },
+              "registrationKind": "provider-enumeration",
+              "providerSurface": "qwen.system.tools"
+            },
+            "providerCliFallback": {
+              "confirmedBy": "provider-cli",
+              "registrationCount": 3,
+              "toolNames": [
+                "shell",
+                "workspace-read",
+                "workspace-write"
+              ],
+              "fallbackStatus": "failed",
+              "probeSurface": "qwen.mcp.list"
+            },
+            "eventObserved": {
+              "confirmedBy": "event-observed",
+              "registrationCount": 0,
+              "toolNames": []
+            }
+          }
+        },
+        "gemini": {
+          "runId": "d4f57b27-fb4e-4843-a5fa-1a1e9e1d50fd",
+          "requirements": [
+            "run_shell_command:shell",
+            "read_file:workspace-read",
+            "mcp__docs__search:mcp"
+          ],
+          "unclassifiedExcluded": "just_list",
+          "cliFallbackStatus": "timeout",
+          "evidence": {
+            "providerRuntime": {
+              "confirmedBy": "provider-runtime",
+              "registrationCount": 3,
+              "toolNames": [
+                "mcp__docs__search",
+                "read_file",
+                "run_shell_command"
+              ],
+              "requirementByTool": {
+                "mcp__docs__search": "mcp",
+                "read_file": "workspace-read",
+                "run_shell_command": "shell"
+              },
+              "registrationKind": "provider-enumeration",
+              "providerSurface": "gemini.acp.session_update.tool_call"
+            },
+            "providerCliFallback": {
+              "confirmedBy": "provider-cli",
+              "registrationCount": 4,
+              "toolNames": [
+                "mcp",
+                "network",
+                "shell",
+                "workspace-read"
+              ],
+              "fallbackStatus": "timeout",
+              "probeSurface": "gemini.mcp.list"
+            },
+            "eventObserved": {
+              "confirmedBy": "event-observed",
+              "registrationCount": 0,
+              "toolNames": []
+            }
+          }
+        }
+      }
+    }
+  ]
+}

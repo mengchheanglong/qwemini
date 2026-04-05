@@ -1,0 +1,128 @@
+import type { ShellState } from './controller-shell-state.js';
+
+export type ControllerUiSyncState = Pick<
+  ShellState,
+  | 'runtime'
+  | 'selectedSession'
+  | 'selectedRun'
+  | 'workspacePathDraft'
+  | 'providerIdDraft'
+  | 'sessionApprovalPolicyDraft'
+  | 'sessionApprovalPolicyDraftDisabled'
+  | 'promptDraftDisabled'
+  | 'routingToolsDraft'
+  | 'selectedSessionApprovalPolicyDraft'
+  | 'selectedSessionApprovalPolicyDraftDisabled'
+  | 'applySelectedSessionPolicyDisabled'
+  | 'startRunDisabled'
+  | 'routeRunDisabled'
+  | 'delegateRunDisabled'
+  | 'handoffRunDisabled'
+  | 'resumeSessionDisabled'
+  | 'cancelRunDisabled'
+  | 'reviewRunDisabled'
+  | 'verifyRunDisabled'
+  | 'sessionProviderNoteMessage'
+  | 'selectedSessionNoteMessage'
+>;
+
+export type ControllerRequesterState = Pick<
+  ShellState,
+  | 'workspacePathDraft'
+  | 'providerIdDraft'
+  | 'sessionApprovalPolicyDraft'
+  | 'promptDraft'
+  | 'routingToolsDraft'
+  | 'delegateRoleDraft'
+>;
+
+export type ControllerRunActionState = Pick<
+  ShellState,
+  | 'selectedSession'
+  | 'selectedRun'
+  | 'recommendation'
+  | 'sessions'
+  | 'runs'
+  | 'recentSessionsMessage'
+  | 'promptDraft'
+  | 'routingToolsDraft'
+  | 'delegateRoleDraft'
+  | 'workspacePathDraft'
+  | 'providerIdDraft'
+  | 'sessionApprovalPolicyDraft'
+  | 'selectedSessionApprovalPolicyDraft'
+  | 'selectedSessionApprovalPolicyDraftDisabled'
+  | 'applySelectedSessionPolicyDisabled'
+  | 'orchestratorNoteMessage'
+  | 'recommendationRequestToken'
+>;
+
+export type ControllerRuntimeSessionState = Pick<
+  ShellState,
+  | 'runtime'
+  | 'toolPlane'
+  | 'sessions'
+  | 'recentSessionsMessage'
+  | 'archiveSessions'
+  | 'orchestrationFlows'
+  | 'selectedSession'
+  | 'runs'
+  | 'workspacePathDraft'
+  | 'providerHealthMessage'
+  | 'providerSessionLabel'
+  | 'dataDirectoryLabel'
+  | 'toolPlaneNoteMessage'
+  | 'sessionSelectionToken'
+  | 'runSelectionToken'
+  | 'toolPlaneRequestToken'
+>;
+
+export type ControllerRunStreamState = Pick<
+  ShellState,
+  | 'selectedSession'
+  | 'runs'
+  | 'sessions'
+  | 'selectedRun'
+  | 'eventSource'
+  | 'events'
+  | 'artifacts'
+  | 'approvals'
+  | 'checkpoints'
+  | 'tools'
+  | 'recentSessionsMessage'
+  | 'providerSessionLabel'
+  | 'runTitleLabel'
+  | 'runStatusLabel'
+  | 'runStatusClassName'
+  | 'runStateNoteMessage'
+  | 'runSelectionToken'
+>;
+
+export type ControllerBootstrapState = Pick<
+  ShellState,
+  | 'toolPlane'
+  | 'sessions'
+  | 'recentSessionsMessage'
+  | 'archiveSessions'
+  | 'orchestrationFlows'
+  | 'selectedSession'
+  | 'selectedRun'
+  | 'runs'
+  | 'recommendation'
+  | 'providerSessionLabel'
+  | 'toolPlaneNoteMessage'
+  | 'selectedSessionNoteMessage'
+  | 'recommendationRequestToken'
+  | 'runSelectionToken'
+  | 'eventSource'
+  | 'events'
+  | 'artifacts'
+  | 'approvals'
+  | 'checkpoints'
+  | 'tools'
+  | 'runTitleLabel'
+  | 'runStatusLabel'
+  | 'runStatusClassName'
+  | 'runStateNoteMessage'
+  | 'orchestratorNoteMessage'
+>;

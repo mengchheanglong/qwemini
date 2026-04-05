@@ -1,0 +1,98 @@
+# AGENTS.md
+
+Project: **Qwemini**  
+Tagline: **One workspace for Qwen and Gemini**
+
+Qwemini is an open-source, local-first agent workspace that brings **Qwen CLI** and **Gemini CLI** into one unified environment. The product should feel like a real coding-agent environment, not a thin wrapper around one CLI.
+
+## Read this first
+
+For any significant product, runtime, orchestration, provider, protocol, or state change, read:
+
+1. `README.md`
+2. `docs/architecture.md`
+
+If an `implement.md`, `backlog.md`, or other active planning file exists, read that after the architecture doc.
+
+## What this repo is building
+
+Qwemini is building a provider-flexible coding-agent environment with:
+
+- a product-owned shell
+- a local daemon as the control center
+- provider adapters for Qwen, Gemini, and future engines
+- a shared protocol for events, approvals, artifacts, and tool activity
+- a shared state layer
+- a shared tool / MCP plane
+- orchestration above the engine adapters
+
+## Non-goals
+
+Do not drift into these shapes unless the user explicitly decides to change direction:
+
+- not a wrapper around a single provider
+- not a VS Code extension first
+- not a pure terminal-only product
+- not a provider-owned UI
+- not orchestration hidden inside provider adapters
+
+## Core architectural rules
+
+1. The UI must not talk directly to provider CLIs. It talks to the daemon.
+2. The daemon owns the authoritative run/session/state ledger.
+3. Provider-specific behavior belongs behind provider adapters.
+4. Orchestration belongs above adapters, not inside them.
+5. The top layer must remain provider-agnostic.
+6. Plugins must be removable without breaking core product behavior.
+7. Tool behavior must be inspectable and governed by explicit approval rules.
+8. Important actions should emit normalized events.
+9. Resumability and checkpointing are first-class concerns.
+10. Avoid backend lock-in in shared packages.
+
+## Working style for Codex
+
+- Prefer small, bounded slices over sweeping rewrites.
+- Once the repo has a stable scaffold, prefer bundled loops of 2-3 compatible changes with one validation pass instead of stopping after every micro-step.
+- Preserve clear package boundaries.
+- When adding a shared abstraction, prove that it is needed by more than one provider or subsystem.
+- Do not invent product capabilities that are not in `docs/architecture.md` without updating the docs.
+- When architecture changes materially, update `docs/architecture.md` in the same task.
+- When repeated operational guidance emerges, update this `AGENTS.md` so the guidance persists.
+
+## Package intent
+
+Use these boundaries unless the repo structure is intentionally changed:
+
+- `apps/` → user-facing shell(s) and daemon app(s)
+- `packages/protocol/` → normalized runtime contracts and event schemas
+- `packages/state/` → persistence, migrations, checkpoints, archive support
+- `packages/providers/` → provider adapters only
+- `packages/orchestrator/` → routing, roles, review/verify flows, handoffs
+- `packages/mcp-hub/` → shared tool and MCP integration plane
+- `packages/plugins/` → optional extensions that can fail without breaking core
+- `docs/` → architectural and product truth
+
+## Validation expectations
+
+- Prefer real repo checks over guesswork.
+- Do not claim a command passed unless it was actually run.
+- Do not invent test/build commands that do not exist yet.
+- If scaffolding is incomplete, state what was validated and what is still missing.
+
+## Documentation expectations
+
+- Keep `AGENTS.md` concise and durable.
+- Keep detailed architecture in `docs/architecture.md`.
+- Keep active task planning in implementation-focused docs, not in `AGENTS.md`.
+- If a folder later needs local instructions, add a deeper `AGENTS.md` rather than bloating this root file.
+
+## Current implementation posture
+
+Until the repo says otherwise, treat Qwemini as:
+
+- local-first
+- daemon-centered
+- provider-flexible
+- Qwen-first and Gemini-second for initial adapters
+- MCP/tool-pluggable
+- orchestration-capable, but with phased rollout

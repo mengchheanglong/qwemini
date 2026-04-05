@@ -1,0 +1,12 @@
+node_modules/
+.qwemini/
+.tmp/
+agent-control/
+dist/
+coverage/
+npm-debug.log*
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+*.tsbuildinfo

@@ -1,0 +1,336 @@
+import {
+  mountToastContainer,
+  toast,
+} from './toasts.js';
+import {
+  buildRunViewState,
+  buildShellPanelsState,
+} from './lib/controller-state-mappers.js';
+import { createDaemonApi } from './lib/daemon-api.js';
+import { createControllerRuntimeSessionFlows } from './lib/controller-runtime-session-flows.js';
+import { createControllerRunActionFlows } from './lib/controller-run-action-flows.js';
+import { createControllerRunStreamFlows } from './lib/controller-run-stream-flows.js';
+import { createControllerUiSync } from './lib/controller-ui-sync.js';
+import { createControllerRequesters } from './lib/controller-requesters.js';
+import {
+  createInitialShellState,
+  type ShellState,
+} from './lib/controller-shell-state.js';
+import {
+  emitRunViewState as publishRunViewState,
+  emitShellControlsState as publishShellControlsState,
+  emitShellPanelsState as publishShellPanelsState,
+  emitShellSummaryState as publishShellSummaryState,
+  setControllerRequesters,
+} from './lib/controller-bridge.js';
+import { createControllerBootstrapHelpers } from './lib/controller-bootstrap-helpers.js';
+
+export {
+  requestApprovalResolution,
+  requestApplySelectedSessionPolicy,
+  requestCancelSelectedRun,
+  requestCheckpointRecovery,
+  requestCreateSession,
+  requestDelegatePrompt,
+  requestDelegateRoleChange,
+  requestFollowUpRun,
+  requestHandoffPrompt,
+  requestPromptDraftChange,
+  requestRecoverSelectedSession,
+  requestSessionDelete,
+  requestRoutePrompt,
+  requestRoutingToolsDraftChange,
+  requestRunSelection,
+  requestSelectedSessionPolicyDraftChange,
+  requestSessionDraftChange,
+  requestSessionSelection,
+  requestStartRun,
+  requestWorkspaceDraftCommit,
+  subscribeRunViewState,
+  subscribeShellControlsState,
+  subscribeShellPanelsState,
+  subscribeShellSummaryState,
+} from './lib/controller-bridge.js';
+
+let initialized = false;
+
+export async function initializeShell() {
+  if (initialized) {
+    return;
+  }
+
+  initialized = true;
+
+  const state: ShellState = createInitialShellState();
+
+  const toastContainer = document.querySelector(
+    '#toast-container',
+  ) as HTMLDivElement;
+
+  mountToastContainer(toastContainer);
+  const api = createDaemonApi({
+    onError: (message) => {
+      toast.error(message);
+    },
+  });
+
+function getSelectedPrompt() {
+  return state.promptDraft.trim();
+}
+
+function getSelectedWorkspacePath() {
+  return state.selectedSession?.workspacePath || state.workspacePathDraft.trim();
+}
+
+function getPreferredProviderId() {
+  return state.selectedSession?.providerId || state.providerIdDraft;
+}
+
+function getRouteApprovalPolicy() {
+  return state.selectedSession?.approvalPolicy || state.sessionApprovalPolicyDraft;
+}
+
+function getRequiredTools() {
+  return [...state.routingToolsDraft];
+}
+
+function closeStream() {
+  if (state.eventSource) {
+    state.eventSource.close();
+    state.eventSource = null;
+  }
+}
+
+function emitRunViewState() {
+  publishRunViewState(
+    buildRunViewState({
+      selectedSessionId: state.selectedSession?.id ?? null,
+      runs: state.runs,
+      selectedRun: state.selectedRun,
+      events: state.events,
+    }),
+  );
+}
+
+function emitShellPanelsState() {
+  publishShellPanelsState(
+    buildShellPanelsState({
+      selectedSessionId: state.selectedSession?.id ?? null,
+      selectedProviderId: state.selectedSession?.providerId ?? null,
+      selectedSessionCapabilities: state.selectedSession
+        ? getProviderCapabilities(state.selectedSession.providerId)
+        : null,
+      recentSessions: state.sessions,
+      recentSessionsMessage: state.recentSessionsMessage,
+      archiveSessions: state.archiveSessions,
+      orchestrationFlows: state.orchestrationFlows,
+      checkpoints: state.checkpoints,
+      approvals: state.approvals,
+      artifacts: state.artifacts,
+      tools: state.tools,
+      toolPlane: state.toolPlane,
+    }),
+  );
+  emitShellSummaryState();
+}
+
+function emitShellSummaryState() {
+  publishShellSummaryState({
+    providerHealth: state.providerHealthMessage,
+    providerSession: state.providerSessionLabel,
+    dataDirectory: state.dataDirectoryLabel,
+    toolPlaneNote: state.toolPlaneNoteMessage,
+    sessionProviderNote: state.sessionProviderNoteMessage,
+    selectedSessionNote: state.selectedSessionNoteMessage,
+    runTitle: state.runTitleLabel,
+    runStatusLabel: state.runStatusLabel,
+    runStatusClassName: state.runStatusClassName,
+    runStateNote: state.runStateNoteMessage,
+    orchestratorNote: state.orchestratorNoteMessage,
+  });
+}
+
+function emitShellControlsState() {
+  publishShellControlsState({
+    workspacePath: state.workspacePathDraft,
+    providerId: state.providerIdDraft,
+    sessionApprovalPolicy: state.sessionApprovalPolicyDraft,
+    sessionApprovalPolicyDisabled: state.sessionApprovalPolicyDraftDisabled,
+    prompt: state.promptDraft,
+    promptDisabled: state.promptDraftDisabled,
+    routingTools: [...state.routingToolsDraft],
+    delegateRole: state.delegateRoleDraft,
+    selectedSessionApprovalPolicy: state.selectedSessionApprovalPolicyDraft,
+    selectedSessionApprovalPolicyDisabled:
+      state.selectedSessionApprovalPolicyDraftDisabled,
+    applySelectedSessionPolicyDisabled: state.applySelectedSessionPolicyDisabled,
+    startRunDisabled: state.startRunDisabled,
+    routeRunDisabled: state.routeRunDisabled,
+    delegateRunDisabled: state.delegateRunDisabled,
+    handoffRunDisabled: state.handoffRunDisabled,
+    resumeSessionDisabled: state.resumeSessionDisabled,
+    cancelRunDisabled: state.cancelRunDisabled,
+    reviewRunDisabled: state.reviewRunDisabled,
+    verifyRunDisabled: state.verifyRunDisabled,
+  });
+}
+
+const {
+  getProviderCapabilities,
+  syncApprovalPolicyControls,
+  syncCancelAction,
+  syncFollowUpActions,
+  syncResumeAction,
+  syncRouteAction,
+  syncRunAction,
+  syncSessionCreationControls,
+} = createControllerUiSync({
+  state,
+  emitShellControlsState,
+  emitShellSummaryState,
+  getSelectedPrompt,
+});
+
+const {
+  clearRunSelectionView,
+  clearSessionSelectionState,
+  resetRunInspector,
+  setArchiveUnavailableState,
+  setSessionsUnavailableState,
+  setToolPlaneUnavailableState,
+  transitionToNewSession,
+} = createControllerBootstrapHelpers({
+  state,
+  emitRunViewState,
+  emitShellPanelsState,
+  emitShellSummaryState,
+  syncResumeAction,
+  syncApprovalPolicyControls,
+  syncRouteAction,
+  syncRunAction,
+  syncCancelAction,
+  syncFollowUpActions,
+  closeStream,
+  loadArchive: () => loadArchive(),
+  selectSession: (sessionId) => selectSession(sessionId),
+  refreshRecommendation: () => refreshRecommendation(),
+});
+
+const {
+  applyRunSnapshot,
+  refreshRun,
+  selectRun,
+} = createControllerRunStreamFlows({
+  state,
+  api,
+  emitRunViewState,
+  emitShellPanelsState,
+  emitShellSummaryState,
+  syncCancelAction,
+  syncFollowUpActions,
+  syncRunAction,
+  syncResumeAction,
+  syncApprovalPolicyControls,
+  clearRunSelectionView,
+  closeStream,
+  loadArchive: () => loadArchive(),
+  refreshRecommendation: () => refreshRecommendation(),
+});
+
+const {
+  deleteSession,
+  loadArchive,
+  loadRuntime,
+  loadSessions,
+  loadToolPlane,
+  recoverFromCheckpoint,
+  recoverSelectedSession,
+  selectSession,
+} = createControllerRuntimeSessionFlows({
+  state,
+  api,
+  emitRunViewState,
+  emitShellPanelsState,
+  syncResumeAction,
+  syncApprovalPolicyControls,
+  syncFollowUpActions,
+  syncRunAction,
+  syncSessionCreationControls,
+  syncCancelAction,
+  setSessionsUnavailableState,
+  setArchiveUnavailableState,
+  setToolPlaneUnavailableState,
+  clearSessionSelectionState,
+  clearRunSelectionView,
+  closeStream,
+  refreshRecommendation: () => refreshRecommendation(),
+  selectRun,
+  transitionToNewSession,
+});
+
+const {
+  cancelSelectedRun,
+  createFollowUpRun,
+  createSession,
+  delegatePrompt,
+  handoffPrompt,
+  refreshRecommendation,
+  resolveApproval,
+  routePrompt,
+  startRun,
+  updateSelectedSessionPolicy,
+  updateSelectedSessionPolicyDraft,
+} = createControllerRunActionFlows({
+  state,
+  api,
+  emitRunViewState,
+  emitShellPanelsState,
+  emitShellSummaryState,
+  emitShellControlsState,
+  syncRouteAction,
+  syncResumeAction,
+  syncApprovalPolicyControls,
+  loadArchive,
+  selectRun,
+  refreshRun,
+  transitionToNewSession,
+  applyRunSnapshot,
+  getSelectedPrompt,
+  getSelectedWorkspacePath,
+  getPreferredProviderId,
+  getRouteApprovalPolicy,
+  getRequiredTools,
+});
+
+setControllerRequesters(createControllerRequesters({
+  state,
+  emitShellControlsState,
+  syncSessionCreationControls,
+  syncRunAction,
+  syncRouteAction,
+  loadToolPlane,
+  refreshRecommendation,
+  selectRun,
+  selectSession,
+  recoverFromCheckpoint,
+  recoverSelectedSession,
+  deleteSession,
+  resolveApproval,
+  updateSelectedSessionPolicyDraft,
+  createSession,
+  startRun,
+  routePrompt,
+  delegatePrompt,
+  handoffPrompt,
+  updateSelectedSessionPolicy,
+  cancelSelectedRun,
+  createFollowUpRun,
+}));
+
+emitRunViewState();
+emitShellPanelsState();
+emitShellControlsState();
+await loadRuntime().catch(() => {});
+await loadArchive().catch(() => {});
+await loadSessions().catch(() => {});
+}
