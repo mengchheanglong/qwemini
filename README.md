@@ -102,104 +102,71 @@ simple, composable, and built for experimentation.
 
 ---
 
-## Status
+## Features
 
-**First executable slice in progress**
+### Daemon & State
+- **Local daemon** — HTTP server on `127.0.0.1:4120` serving both REST APIs and the web shell
+- **SQLite state** — persistent sessions, runs, events, approvals, checkpoints, tool invocations, and session registry with WAL journaling
+- **Shared protocol** — normalized `WorkbenchEvent` stream across providers (run.started, tool.requested, approval.resolved, etc.)
 
-The repo now includes:
+### Providers
+- **Qwen CLI adapter** — stream-json SDK with control-path integration, approval mediation, session resume, and checkpoint support
+- **Gemini CLI adapter** — ACP default (daemon-mediated permissions) with `QWEMINI_GEMINI_MODE=stream-json` fallback
+- **Windows fixes** — direct Node entrypoint resolution for both providers; bundled `node-pty` patch for Gemini ACP
+- **Health checks** — capability-aware provider probing with visible approval/resume/checkpoint differences
 
-- a minimal local daemon
-- a React + TypeScript + Vite local web shell, with daemon-owned static hosting from built assets
-- a shared protocol package
-- a SQLite-backed state package
-- a first Qwen provider seam that uses Qwen's stream-json SDK/control path
-- a first Gemini provider seam that uses Gemini CLI stream-json output
-- daemon-owned approval records and approval resolution API
-- an approvals pane in the local shell
-- an explicit approval-wait run state in the daemon and shell
-- persisted provider session IDs for Qwen resume
-- persisted provider session IDs for Gemini resume
-- persisted checkpoint records in the shared state layer
-- an explicit recovery action that can fork a new session from saved provider context
-- a richer run inspector that separates live transcript deltas from final assistant messages
-- a typed React shell-state bridge for run history, session/archive/orchestration, checkpoints, approvals, artifacts, tool-plane panels, shell summary/status surfaces, and shell control/form state, while keeping daemon/API ownership unchanged
-- a Panes-derived shell layout reset with a thin top menu bar, a left project/session rail, a dominant center conversation pane, a right inspector rail, a bottom-docked composer, persisted resizable columns, grouped quick-open, keyboard shell controls, a collapsible utility rail, and the same daemon/controller contract underneath
-- a tighter Panes donor-alignment pass that removes more of the old accent-heavy dashboard chrome, adds a sparse empty conversation state, and makes the shell read more like a flat desktop workbench than stacked cards
-- a more literal Panes frontend donor port for the shell frame, with a donor-style left rail section model, a calmer inspector header/navigation frame, and donor-driven rail proportions while preserving the same Qwemini controller/daemon behavior underneath
-- a donor-style rail/body refinement that makes session/run/archive rows and inspector cards follow the Panes project-thread and Changes-panel rhythm more closely, instead of generic stacked list cards
-- a terminal-style center-pane refinement that makes the main workspace read closer to the Panes terminal layout, with a flatter tab strip, darker canvas, mono output lines, and tighter integrated composer spacing
-- a tighter center-pane proportion pass that moves runtime status into a bottom terminal footer and brings the header, tab strip, canvas, and composer spacing closer to the donor proportions
-- a compact donor-style center-header control group that replaces labeled action buttons with a tighter icon-only cluster while keeping the same Qwemini actions underneath
-- a tighter donor-style header pass that flattens the center breadcrumb row and right inspector header into compact single-row bars with inline notes and calmer spacing
-- a denser donor-style tab and inspector pass that turns the right rail into flatter changes-list rows and tightens the center/utility tab strips toward the donor terminal and git-panel rhythm
-- a compact rail-and-composer pass that shrinks session setup into project-rail controls and turns the bottom prompt footer into a denser donor-style chat dock with pill controls and a circular send action
-- a flatter tree-rhythm pass for the left rail that makes session/run/archive/flow rows read more like a donor project/thread tree, while further reducing composer control weight in the bottom dock
-- a quieter center-canvas and dock pass that removes the extra composer header block, folds status hints into the bottom dock, and shrinks the empty-state treatment toward the donor's blank-workspace behavior
-- a frame-spacing fidelity pass that tightens default rail widths, resize seams, header gutters, and center/inspector padding so the whole shell sits closer to the donor proportions
-- a collapsed-inspector and type-scale pass that removes truncated right-rail header text when collapsed and reduces the shell font sizing toward the donor's denser desktop rhythm
-- a center-palette pass that removes the earlier blue/teal tint from the middle workspace and aligns the canvas, header strip, and dock to the donor's neutral near-black colors
-- a legacy-gradient cleanup that removes the last blue center backgrounds from shared panel surfaces so the middle pane actually stays neutral black under the donor shell
-- a dark native-select pass that makes provider and policy dropdown popups follow the shell's dark donor palette instead of bright Windows-native menu colors
-- a first-class persisted tool invocation ledger instead of a tool pane derived only from events
-- a minimal archive summary view with per-session run history
-- a vendoring-ready Qwen launch seam that can prefer a bounded in-repo donor build when present
-- a first bounded Qwen vendor import for the stream-json wire contract and parser helper used by the provider
-- a deeper bounded Qwen control-path import for the stream-json output adapter and control dispatcher shape used by the provider
-- a session-scoped Qwen control context import that carries input-closed state through the vendored dispatcher path
-- a non-blocking Qwen incoming control dispatch path so approval waits no longer stop later stdout events from being normalized
-- a product-owned cancel flow that interrupts Qwen through the control channel before falling back to process kill
-- a Windows Qwen direct-entrypoint launch path that resolves the global `qwen` shim to its Node entrypoint, so Qwemini no longer depends on shelling through `qwen.cmd`
-- a Qwen session-metadata refresh path that now promotes later provider `session_id` updates into the daemon-owned session and checkpoint ledger instead of keeping only the bootstrap ID
-- a session-level approval policy surface owned by the daemon/session ledger instead of only an env default
-- archive/session summaries that now preserve whether a session was recovered from another session or from a checkpoint
-- explicit provider capability flags in runtime health so Qwen/Gemini approval, resume, and checkpoint differences are visible in the product
-- capability-aware shell guardrails so Gemini sessions no longer imply daemon-enforced approvals or provider checkpoint support that do not exist yet
-- daemon-level capability enforcement so unsupported approval policies are rejected at the API boundary instead of only being disabled in the shell
-- daemon run preflight plus shell availability guardrails so known-unavailable providers are blocked before a run starts instead of failing only inside adapter launch
-- a Gemini ACP default path that routes Gemini permission requests through the daemon and shared approval ledger, with `QWEMINI_GEMINI_MODE=stream-json` retained as the fallback path
-- a hardened Gemini ACP adapter that now preserves tool titles/output in the shared ledger, keeps cancellation terminal, and fails cleanly on the current Windows terminal-helper crash instead of leaving runs stuck forever
-- a Qwemini-owned Windows Gemini runtime patch that preloads a bounded `node-pty` fix for Gemini ACP shell-command runs instead of requiring manual edits to the global Gemini install
-- a first shared orchestration package above both providers, with daemon-owned `recommend` and `route` APIs plus a shell `Route Prompt` flow that can fork a new session onto the recommended runtime
-- daemon-owned review and verify follow-up runs that can fork a completed run into explicit reviewer or verifier sessions, with orchestration lineage preserved in the session ledger and run timeline
-- daemon-owned delegate and handoff runs that can fork a completed run into planner/research/verifier subtasks or a new main-session continuation, with orchestration role/kind preserved in the session ledger and run timeline
-- MCP-aware routing signals in the daemon and shell, so orchestration can route on explicit tool requirements like `mcp`, `shell`, or `workspace-write` instead of relying only on prompt wording
-- a daemon-backed orchestration board that groups routed and child sessions into inspectable flows, so review, verify, delegate, and handoff chains are visible as one product-owned lineage instead of isolated session rows
-- a first shared `mcp-hub` signal layer that snapshots normalized tool readiness from provider availability plus recent tool-ledger history, so routing can cite concrete daemon-owned evidence instead of only prompt heuristics
-- a workspace-scoped tool registry in `.qwemini/mcp.json` or `.mcp.json`, so MCP readiness now depends on actual configured servers for that workspace instead of only provider defaults
-- provider-owned tool catalogs feeding the shared tool plane, so shell/write/network/MCP readiness is now declared by adapters and then filtered by workspace registry plus workspace-local observed history
-- a session-aware tool-plane scope, so the daemon can answer both “what this workspace has used” and “what this active session has actually touched” when routing follow-up work
-- daemon-owned live session tool registration signals, so session-scoped recommendations can include tools observed and registered in the active session, not just workspace-level history
-- provider-connected Qwen/Gemini tool enumeration at run start, so explicit session registration records can represent provider-reported connected tools in addition to inferred event history
-- provider-runtime registration ingestion from Qwen `system.tools` messages and Gemini ACP tool metadata through normalized `tool.registered` events, so live session registration evidence is no longer limited to startup CLI probes
-- hardened requirement inference across daemon/provider/tool-plane paths, so shell-like registrations such as `run_shell_command` now classify as `shell` instead of accidental read-only matches
-- a shared protocol-owned requirement classifier consumed by daemon, providers, and `mcp-hub`, so registration requirement inference no longer drifts across copied regex logic
-- a deterministic registration validation script (`npm run check:registrations`) backed by fake Qwen runtime and fake Gemini ACP fixtures under `scripts/`, so runtime registration checks are repeatable without ad hoc temp harnesses
-- a hardened Gemini launch path that accepts direct Node script command overrides (`.js/.mjs/.cjs`), avoiding fragile Windows `.cmd` quoting in provider health and probe flows
-- a Windows Gemini global-install resolution fix that detects the current bundled CLI entrypoint layout (`bundle/gemini.js` as well as older `dist/index.js` layouts), so Gemini health checks and daemon launches now work on this machine without falling back to broken `.cmd --version` probing
-- provider-cli connected-tool registrations now carry explicit `mcp list` probe metadata (`mcpListProbeStatus`, `mcpListProbeSurface`, `mcpListProbeDetail`), so startup probe fallback evidence is inspectable and distinct from provider-runtime `tool.registered` evidence
-- expanded deterministic registration coverage now validates shell/workspace-read/mcp mappings and unclassified-name exclusion while forcing both `mcp list` failure and timeout fallback paths in fake Qwen and fake Gemini fixtures, including both mixed-outcome permutations where one provider times out while the other fails, plus an expected-vs-observed JSON scenario matrix that preserves provider-runtime, provider-cli fallback, and event-observed evidence partitions
-- a dedicated shell Tool Plane evidence panel (backed by `apps/web/src/tool-plane.js`) that shows `provider-enumerated` vs `event-observed` registration signals per provider
-- typed React inspector/archive panels, so those shell surfaces are no longer rendered through imperative helper modules hanging off the controller
-- a validated end-to-end usability pass where Qwen and Gemini both complete real daemon-owned file-writing tasks in a disposable workspace, and Qwen manual-approval runs pause, accept a daemon approval decision, and resume to completion
-- a first-run shell path that no longer needs a pre-created session before the composer works: send can create the session on demand, route can operate from draft workspace/provider state, and recommendation previews can run before session creation
-- a deterministic shell usability validation script (`npm run check:shell`) that locks in first-run send/route behavior so the composer cannot silently regress back into a static pre-session UI
-- a clearer composer interaction model with a visible `Send` button, inline send guidance, and `Enter` to send / `Shift+Enter` for newline behavior, so the primary run action is no longer hidden behind an unlabeled icon
-- a readable run conversation view that groups streamed assistant output into paragraphs, renders Qwen thinking in a subdued style, and shows the original user prompt in the conversation flow instead of only assistant fragments
-- a simplified main run surface that now centers on a single `Chat` view plus `Events`, removing the duplicate `Terminal` / `Output` split and styling the conversation closer to Codex/Claude thread UX
-- a cleaner composer hierarchy where `Send` remains the obvious primary action and secondary orchestration actions (`Route`, `Delegate`, `Handoff`) sit behind a compact actions menu instead of competing in the main button row
-- a more Codex-like composer footer with a compact `+` config menu, visible model/provider pill, visible access/permissions pill, and a quieter guidance row instead of the earlier dashboard-style footer clutter
-- a closer Codex-style thread shell where the main tab is now `Thread`, assistant replies read as plain paragraphs, user prompts render as compact bubbles, thinking stays muted gray, advanced orchestration actions live inside the `+` menu, and the bottom footer strip now uses provider/access pill menus plus a simpler local-status bar
-- a closer Codex-style message layout where user prompts render on the right side, and a denser Codex-like right inspector rail with compact section chips, darker utility cards, and calmer utility panel chrome
-- a closer Codex-style composer surface with a larger rounded chat box, sans-serif prompt text, calmer placeholder text, and a less terminal-like input area
-- a closer Codex-style left rail with denser thread/workspace rows, softer setup chrome, simpler thread metadata, and a calmer workspace/thread navigation hierarchy
-- a closer Codex-style top shell and header strip, with a simpler workspace header, tighter action buttons, and a calmer `Context` utility heading
-- a further left-rail/top-shell cleanup that removes the loud runtime status chrome, narrows the sidebar, flattens thread rows, and reduces the boxed dashboard feel
-- a more literal Codex-style shell rewrite for the menu bar, left thread rail, centered thread rhythm, and bottom composer arrangement, while keeping the same daemon/controller behavior underneath
+### Orchestration
+- **Route Prompt** — orchestrator picks the best provider based on tool requirements, heuristics, and tool-plane signals
+- **Review / Verify** — fork completed runs into reviewer or verifier sessions with cross-provider routing
+- **Delegate** — spawn planner/researcher/verifier child runs under explicit orchestration roles
+- **Handoff** — continue a run in a new main session with prior context preserved
+- **Orchestration board** — grouped view of parent and child sessions as inspectable flows
 
-Current limitation:
+### Tool Plane & MCP
+- **Workspace registry** — `.qwemini/mcp.json` or `.mcp.json` defines tool requirements and MCP servers per workspace
+- **Provider catalogs** — adapters declare available tools (workspace-read, write, shell, network, MCP)
+- **Session registrations** — live tracking of tools observed and reported in active sessions
+- **MCP hub** — normalizes tool readiness from provider availability, registry config, and observed history
 
-- Gemini now defaults to ACP because that is the stronger Codex-like product seam, but `QWEMINI_GEMINI_MODE=stream-json` is still available as a fallback if ACP behavior regresses on another machine
-- the Qwen bridge still runs the external CLI today, even though the provider can now prefer vendored build candidates under `vendor/qwen-code/` once that bounded donor slice is imported
+### Shell
+- **Three-column layout** — left session rail, center thread/canvas, right inspector/utility panel with resizable columns
+- **Thread view** — grouped assistant replies, user prompt bubbles, Qwen thinking in muted style
+- **Events timeline** — normalized event log with tool call/activity evidence
+- **Approvals** — daemon-mediated approval lists with resolve/deny actions
+- **Tool plane evidence** — provider-enumerated vs event-observed tool registration signals
+- **Archive explorer** — per-session run summaries with recovery/lineage metadata
+- **Quick open** — grouped command palette with keyboard shortcuts (`Ctrl/Cmd+K`)
+- **Checkpoints** — persisted recovery points visible in the inspector
+
+### Validation
+- `npm run check` — TypeScript type checking
+- `npm run check:shell` — deterministic shell usability tests
+- `npm run check:registrations` — E2E tool registration validation across providers
+- Fake runtime fixtures for Qwen and Gemini to enable repeatable CI testing
+
+---
+
+## Architecture
+
+Qwemini is structured as an npm monorepo with workspaces:
+
+| Layer | Package | Purpose |
+|---|---|---|
+| **Daemon** | `apps/daemon` | HTTP server, provider lifecycle, API routing, static file hosting |
+| **Web shell** | `apps/web` | React + TypeScript + Vite frontend |
+| **Protocol** | `packages/protocol` | Shared types: events, adapters, sessions, tools, orchestration |
+| **State** | `packages/state` | SQLite-backed persistence |
+| **Orchestrator** | `packages/orchestrator` | Routing, follow-up, delegate, handoff logic |
+| **MCP Hub** | `packages/mcp-hub` | Workspace registry, tool-plane snapshots, MCP server status |
+| **Qwen provider** | `packages/providers/qwen` | Qwen CLI adapter with stream-json + control-path |
+| **Gemini provider** | `packages/providers/gemini` | Gemini CLI adapter with ACP default + stream-json fallback |
+
+### Design rules
+1. **UI must NOT talk to provider CLIs directly** — only to the daemon
+2. **Daemon owns the authoritative run/session/state ledger**
+3. **Orchestration lives ABOVE adapters, never inside them**
+
+---
 
 ## Development
 
@@ -209,25 +176,29 @@ npm run build:web
 npm run dev
 ```
 
-`npm run dev` now builds the web shell and starts the daemon so `http://127.0.0.1:4120` stays daemon-served.
+`npm run dev` builds the web shell and starts the daemon at `http://127.0.0.1:4120`.
 
-Frontend-only iteration is also available:
+Frontend-only iteration:
 
 ```bash
 npm run dev:web
 ```
 
-Then open `http://127.0.0.1:4120`.
-
 Validation:
 
 ```bash
-npm run check
-npm run check:shell
-npm run check:registrations
-# Optional CI-friendly JSON summary artifact:
-npm run check:registrations:json
+npm run check                           # TypeScript
+npm run check:shell                      # Shell usability tests
+npm run check:registrations              # Tool registration E2E tests
+npm run check:registrations:json         # CI-friendly JSON summary
 ```
+
+---
+
+## Known limitations
+
+- Qwen runs through the external CLI today; the vendor seam is ready for bounded in-repo builds under `vendor/qwen-code/`
+- Gemini defaults to ACP; use `QWEMINI_GEMINI_MODE=stream-json` as fallback if ACP regresses on another machine
 
 ---
 
@@ -241,4 +212,4 @@ A simple open-source name for a shared workspace built around both.
 
 ## License
 
-TBD
+MIT — see [LICENSE](LICENSE) for details.
