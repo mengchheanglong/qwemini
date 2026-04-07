@@ -70,12 +70,15 @@ import {
   type ShellSummaryState,
 } from './lib/shell-summary-state';
 import { useShellLayout } from './lib/use-shell-layout';
+import { useAutoResizeTextarea } from './lib/use-auto-resize-textarea';
 import {
   formatRunStatus,
   formatSessionOrchestration,
   formatSessionRecovery,
   formatTimestamp,
 } from './shell-status-summary.js';
+import type { QuickOpenItem } from './components/QuickOpen';
+import { QUICK_OPEN_STATIC_ITEMS } from './lib/quick-open-items';
 
 type RailView = 'recent' | 'history' | 'archive' | 'flows';
 type RunViewTab = 'chat' | 'timeline';
@@ -179,9 +182,11 @@ export default function App() {
     readInitialUtilityCollapsed(),
   );
   const [focusView, setFocusView] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
   const [showSessionSetup, setShowSessionSetup] = useState(false);
   const [showRunControls, setShowRunControls] = useState(false);
+  const { textareaRef, autoResize } = useAutoResizeTextarea();
   const composerPlusMenuRef = useRef<HTMLDetailsElement | null>(null);
   const composerProviderMenuRef = useRef<HTMLDetailsElement | null>(null);
   const composerAccessMenuRef = useRef<HTMLDetailsElement | null>(null);
@@ -868,6 +873,13 @@ export default function App() {
             ...
           </button>
         </div>
+        <span
+          id="daemon-connection-indicator"
+          className="app-menu-status daemon-conn-connecting"
+          title="Connecting to daemon…"
+        >
+          connecting…
+        </span>
       </header>
 
       <section
@@ -1189,6 +1201,7 @@ export default function App() {
                     onClick={() => {
                       void requestRecoverSelectedSession();
                     }}
+                    title="Recover session (via action menu)"
                   >
                     Recover
                   </button>
@@ -1202,6 +1215,7 @@ export default function App() {
                         parseApprovalPolicy(event.target.value),
                       );
                     }}
+                    title="Switch approval policy"
                   >
                     <option value="manual">Manual</option>
                     <option value="allow">Allow</option>
@@ -1215,6 +1229,7 @@ export default function App() {
                     onClick={() => {
                       void requestApplySelectedSessionPolicy();
                     }}
+                    title="Pin current approval policy to session"
                   >
                     Apply
                   </button>
@@ -1228,6 +1243,7 @@ export default function App() {
                     onClick={() => {
                       void requestCancelSelectedRun();
                     }}
+                    title="Stop the active run"
                   >
                     Cancel
                   </button>
@@ -1239,6 +1255,7 @@ export default function App() {
                     onClick={() => {
                       void requestFollowUpRun('review');
                     }}
+                    title="Fork into a reviewer session"
                   >
                     Review
                   </button>
@@ -1250,6 +1267,7 @@ export default function App() {
                     onClick={() => {
                       void requestFollowUpRun('verify');
                     }}
+                    title="Fork into a verifier session"
                   >
                     Verify
                   </button>
@@ -1309,8 +1327,25 @@ export default function App() {
                     {hasActiveRun ? 'Continue the conversation' : 'Start a conversation'}
                   </strong>
                   <span className="workspace-empty-message">
-                    Set a workspace on the left, then type below and press Send.
+                    {
+                      !shellControlsState.workspacePath.trim()
+                        ? 'Set a workspace path in the left rail, then type your message below and press Send.'
+                        : hasPromptDraft
+                          ? 'Press Enter or click Send to begin.'
+                          : 'Type your message below and press Enter to start.'
+                    }
                   </span>
+                  {
+                    !hasPromptDraft && shellControlsState.promptDisabled
+                      ? (
+                        <div className="workspace-empty-hint">
+                          {!shellControlsState.providerId
+                            ? 'Choose a provider to get started.'
+                            : 'Draft a prompt to enable the Send button.'}
+                        </div>
+                      )
+                      : null
+                  }
                 </div>
               )}
             </section>
@@ -1327,12 +1362,14 @@ export default function App() {
                 id="prompt-input"
                 name="prompt"
                 rows={1}
+                ref={textareaRef}
                 placeholder={composerPlaceholder}
                 required
                 value={shellControlsState.prompt}
                 disabled={shellControlsState.promptDisabled}
                 onChange={(event) => {
                   void requestPromptDraftChange(event.target.value);
+                  autoResize();
                 }}
                 onKeyDown={handleComposerKeyDown}
               ></textarea>

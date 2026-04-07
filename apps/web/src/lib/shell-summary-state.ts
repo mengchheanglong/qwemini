@@ -1,3 +1,5 @@
+export type DaemonConnectionLabel = 'connected' | 'connecting' | 'disconnected';
+
 export type ShellSummaryState = {
   providerHealth: string;
   providerSession: string;
@@ -10,6 +12,7 @@ export type ShellSummaryState = {
   runStatusClassName: string;
   runStateNote: string;
   orchestratorNote: string;
+  daemonConnectionLabel: DaemonConnectionLabel;
 };
 
 export const emptyShellSummaryState: ShellSummaryState = {
@@ -27,4 +30,5 @@ export const emptyShellSummaryState: ShellSummaryState = {
   runStateNote: 'Select a session and start a run.',
   orchestratorNote:
     'Select a session and enter a prompt to preview daemon-owned provider routing.',
+  daemonConnectionLabel: 'connecting',
 };

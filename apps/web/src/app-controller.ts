@@ -24,6 +24,11 @@ import {
   setControllerRequesters,
 } from './lib/controller-bridge.js';
 import { createControllerBootstrapHelpers } from './lib/controller-bootstrap-helpers.js';
+import {
+  startDaemonHeartbeat,
+  subscribeDaemonHeartbeat,
+  getDaemonConnectionState,
+} from './lib/daemon-heartbeat.js';
 
 export {
   requestApprovalResolution,
@@ -135,6 +140,7 @@ function emitShellPanelsState() {
 }
 
 function emitShellSummaryState() {
+  const connState = getDaemonConnectionState();
   publishShellSummaryState({
     providerHealth: state.providerHealthMessage,
     providerSession: state.providerSessionLabel,
@@ -147,7 +153,24 @@ function emitShellSummaryState() {
     runStatusClassName: state.runStatusClassName,
     runStateNote: state.runStateNoteMessage,
     orchestratorNote: state.orchestratorNoteMessage,
+    daemonConnectionLabel: connState.status,
   });
+
+  // Update the menu bar connection indicator
+  const connEl = document.querySelector('#daemon-connection-indicator') as HTMLElement | null;
+  if (connEl) {
+    connEl.className = `app-menu-status daemon-conn-${connState.status}`;
+    if (connState.status === 'connected') {
+      connEl.textContent = 'daemon';
+      connEl.title = 'Daemon connected';
+    } else if (connState.status === 'connecting') {
+      connEl.textContent = 'connecting…';
+      connEl.title = 'Connecting to daemon…';
+    } else {
+      connEl.textContent = 'offline';
+      connEl.title = `Daemon disconnected (attempt ${connState.attempts})`;
+    }
+  }
 }
 
 function emitShellControlsState() {
@@ -333,4 +356,10 @@ emitShellControlsState();
 await loadRuntime().catch(() => {});
 await loadArchive().catch(() => {});
 await loadSessions().catch(() => {});
+
+// Start daemon heartbeat for connection monitoring
+subscribeDaemonHeartbeat(() => {
+  emitShellSummaryState();
+});
+startDaemonHeartbeat();
 }

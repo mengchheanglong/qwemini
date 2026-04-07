@@ -6174,3 +6174,184 @@ body,
   height: 18px;
   font-size: 12px;
 }
+
+/* Empty state improvements */
+.workspace-empty-hint {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #5a5a5a;
+  font-size: 0.78rem;
+}
+
+/* Keyboard shortcut hints */
+.toolbar-shortcut {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #666;
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  line-height: 1.5;
+}
+
+/* Send button feedback */
+.composer-send-button:active:not(:disabled) {
+  transform: scale(0.96);
+  transition: transform 0.1s ease;
+}
+
+.composer-send-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Focus visible improvements */
+.composer-send-button:focus-visible,
+.header-icon-button:focus-visible,
+.sidebar-primary-button:focus-visible,
+.sidebar-mode-button:focus-visible,
+.secondary-button:focus-visible {
+  outline: 2px solid rgba(54, 207, 201, 0.5);
+  outline-offset: 2px;
+}
+
+/* TabBar active indicator */
+.tab-bar-run .tab-chip.active {
+  position: relative;
+}
+
+.tab-bar-run .tab-chip.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 107, 107, 0.6);
+}
+
+/* Scrollbar polish */
+.panes-run-scroll::-webkit-scrollbar,
+.utility-scroll::-webkit-scrollbar,
+.dock-scroll::-webkit-scrollbar,
+.timeline-thread-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panes-run-scroll::-webkit-scrollbar-track,
+.utility-scroll::-webkit-scrollbar-track,
+.dock-scroll::-webkit-scrollbar-track,
+.timeline-thread-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panes-run-scroll::-webkit-scrollbar-thumb,
+.utility-scroll::-webkit-scrollbar-thumb,
+.dock-scroll::-webkit-scrollbar-thumb,
+.timeline-thread-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+
+.panes-run-scroll::-webkit-scrollbar-thumb:hover,
+.utility-scroll::-webkit-scrollbar-thumb:hover,
+.dock-scroll::-webkit-scrollbar-thumb:hover,
+.timeline-thread-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Quick transitions for toast */
+.toast-item {
+  animation: toast-slide-in 0.25s ease-out;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Composer transitions */
+.panes-composer-shell textarea {
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+/* Subtle hover lift for cards */
+.session-item:hover,
+.flow-card:hover,
+.artifact-card:hover,
+.approval-card:hover,
+.timeline-item:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* Active session visual anchor */
+.session-item.active {
+  position: relative;
+}
+
+.session-item.active::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: rgba(255, 107, 107, 0.7);
+}
+
+/* Badge pulse for active runs */
+.conversation-badge {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 1; }
+}
+
+/* Daemon connection indicator */
+#daemon-connection-indicator {
+  font-size: 0.66rem;
+  padding: 0.2rem 0.46rem;
+  border-radius: 999px;
+  background: rgba(146, 57, 61, 0.12);
+  color: #8a8a8a;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+#daemon-connection-indicator.daemon-conn-connected {
+  background: rgba(73, 195, 125, 0.08);
+  color: #73c397;
+}
+
+#daemon-connection-indicator.daemon-conn-connecting {
+  background: rgba(255, 138, 61, 0.08);
+  color: #c49767;
+  animation: daemon-pulse 2s ease-in-out infinite;
+}
+
+#daemon-connection-indicator.daemon-conn-disconnected {
+  background: rgba(255, 107, 94, 0.12);
+  color: #e57373;
+  animation: daemon-pulse 1s ease-in-out infinite;
+}
+
+@keyframes daemon-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
