@@ -77,8 +77,8 @@ import {
   formatSessionRecovery,
   formatTimestamp,
 } from './shell-status-summary.js';
-import type { QuickOpenItem } from './components/QuickOpen';
-import { QUICK_OPEN_STATIC_ITEMS } from './lib/quick-open-items';
+import { getWorkspaceLabel, summarizePrompt } from './lib/quick-open-helpers.js';
+import { buildQuickOpenItems, type QuickOpenRuntime } from './lib/quick-open-items.js';
 
 type RailView = 'recent' | 'history' | 'archive' | 'flows';
 type RunViewTab = 'chat' | 'timeline';
@@ -115,11 +115,6 @@ function parseDelegateRole(value: string): DelegateRole {
     : 'planner';
 }
 
-function getWorkspaceLabel(workspacePath: string) {
-  const segments = workspacePath.split(/[\\/]/).filter(Boolean);
-  return segments.at(-1) ?? workspacePath;
-}
-
 function getRailSectionLabel(view: RailView) {
   if (view === 'history') {
     return 'Runs';
@@ -131,14 +126,6 @@ function getRailSectionLabel(view: RailView) {
     return 'Agents';
   }
   return 'Threads';
-}
-
-function summarizePrompt(prompt: string) {
-  const trimmed = prompt.trim();
-  if (!trimmed) {
-    return 'No prompt text recorded yet.';
-  }
-  return trimmed.length > 72 ? `${trimmed.slice(0, 69)}...` : trimmed;
 }
 
 function cycleValue<T extends string>(
@@ -493,347 +480,31 @@ export default function App() {
     });
   }
 
-  const quickOpenItems = useMemo<QuickOpenItem[]>(
-    () => {
-      const items: QuickOpenItem[] = [
-        {
-          id: 'view-recent',
-          group: 'Views',
-          title: 'Show Recent Sessions',
-          subtitle: 'Open the recent sessions list in the left column.',
-          badge: 'Recent',
-          keywords: ['left column', 'workspace', 'sessions'],
-          run: () => {
-            setRailView('recent');
-          },
-        },
-        {
-          id: 'view-runs',
-          group: 'Views',
-          title: 'Show Run History',
-          subtitle: 'Open the run history list in the left column.',
-          badge: 'Runs',
-          keywords: ['left column', 'history'],
-          run: () => {
-            setRailView('history');
-          },
-        },
-        {
-          id: 'view-archive',
-          group: 'Views',
-          title: 'Show Archive',
-          subtitle: 'Open archived sessions in the left column.',
-          badge: 'Archive',
-          keywords: ['left column', 'archive'],
-          run: () => {
-            setRailView('archive');
-          },
-        },
-        {
-          id: 'view-flows',
-          group: 'Views',
-          title: 'Show Flows',
-          subtitle: 'Open orchestration flows in the left column.',
-          badge: 'Flows',
-          keywords: ['left column', 'orchestration', 'board'],
-          run: () => {
-            setRailView('flows');
-          },
-        },
-        {
-          id: 'show-chat',
-          group: 'Run View',
-          title: 'Show Thread',
-          subtitle: 'Switch the main detail area to the conversation thread.',
-          badge: 'Thread',
-          keywords: ['run detail', 'conversation', 'thread', 'main column'],
-          run: () => {
-            setRunViewTab('chat');
-          },
-        },
-        {
-          id: 'show-timeline',
-          group: 'Run View',
-          title: 'Show Timeline',
-          subtitle: 'Switch the main detail area to normalized events.',
-          badge: 'Timeline',
-          keywords: ['run detail', 'events', 'main column'],
-          run: () => {
-            setRunViewTab('timeline');
-          },
-        },
-        {
-          id: 'show-approvals',
-          group: 'Utility',
-          title: 'Show Approvals',
-          subtitle: 'Open pending approval decisions in the right column.',
-          badge: 'Approvals',
-          keywords: ['right column', 'utility'],
-          run: () => {
-            setUtilityView('approvals');
-          },
-        },
-        {
-          id: 'show-tools',
-          group: 'Utility',
-          title: 'Show Tools',
-          subtitle: 'Open tool activity and registration evidence.',
-          badge: 'Tools',
-          keywords: ['right column', 'utility', 'tool plane'],
-          run: () => {
-            setUtilityView('tools');
-          },
-        },
-        {
-          id: 'show-artifacts',
-          group: 'Utility',
-          title: 'Show Artifacts',
-          subtitle: 'Open captured artifacts in the right column.',
-          badge: 'Artifacts',
-          keywords: ['right column', 'utility'],
-          run: () => {
-            setUtilityView('artifacts');
-          },
-        },
-        {
-          id: 'show-checkpoints',
-          group: 'Utility',
-          title: 'Show Checkpoints',
-          subtitle: 'Open saved recovery points in the right column.',
-          badge: 'Checkpoints',
-          keywords: ['right column', 'utility', 'recovery'],
-          run: () => {
-            setUtilityView('checkpoints');
-          },
-        },
-        {
-          id: 'create-session',
-          group: 'Actions',
-          title: 'Create Session',
-          subtitle: 'Start a new session with the current workspace and provider drafts.',
-          badge: 'Session',
-          keywords: [
-            shellControlsState.workspacePath,
-            shellControlsState.providerId,
-            shellControlsState.sessionApprovalPolicy,
-          ],
-          run: async () => {
-            await requestCreateSession();
-          },
-        },
-        {
-          id: 'toggle-focus',
-          group: 'Actions',
-          title: focusView ? 'Exit Focus View' : 'Enter Focus View',
-          subtitle: 'Hide or restore the side columns around the active run.',
-          badge: 'Ctrl/Cmd+Shift+F',
-          keywords: ['focus', 'layout', 'columns'],
-          run: () => {
-            setFocusView((current) => !current);
-          },
-        },
-        {
-          id: 'focus-composer',
-          group: 'Actions',
-          title: 'Focus Composer',
-          subtitle: 'Move the cursor into the run prompt composer.',
-          badge: 'Ctrl/Cmd+Shift+J',
-          keywords: ['prompt', 'editor', 'compose'],
-          run: () => {
-            focusComposer();
-          },
-        },
-        {
-          id: 'toggle-utility',
-          group: 'Actions',
-          title: utilityCollapsed ? 'Open Utility Rail' : 'Collapse Utility Rail',
-          subtitle: 'Hide or reveal the right-side operational surface.',
-          badge: 'Ctrl/Cmd+\\',
-          keywords: ['utility', 'right column', 'collapse', 'panel'],
-          run: () => {
-            setUtilityCollapsed((current) => !current);
-          },
-        },
-      ];
-
-      if (!shellControlsState.startRunDisabled) {
-        items.push({
-          id: 'start-run',
-          group: 'Actions',
-          title: 'Start Run',
-          subtitle: 'Dispatch the current prompt on the selected session.',
-          badge: 'Run',
-          keywords: [shellControlsState.prompt, ...shellControlsState.routingTools],
-          run: async () => {
-            await requestStartRun();
-          },
-        });
-      }
-
-      if (!shellControlsState.routeRunDisabled) {
-        items.push({
-          id: 'route-run',
-          group: 'Actions',
-          title: 'Route Prompt',
-          subtitle: 'Ask the orchestrator to place the current prompt on the best runtime.',
-          badge: 'Route',
-          keywords: [shellControlsState.prompt, ...shellControlsState.routingTools],
-          run: async () => {
-            await requestRoutePrompt();
-          },
-        });
-      }
-
-      if (!shellControlsState.delegateRunDisabled) {
-        items.push({
-          id: 'delegate-run',
-          group: 'Actions',
-          title: 'Delegate Prompt',
-          subtitle: `Send the current prompt to a ${shellControlsState.delegateRole} child run.`,
-          badge: shellControlsState.delegateRole,
-          keywords: [shellControlsState.prompt, shellControlsState.delegateRole],
-          run: async () => {
-            await requestDelegatePrompt();
-          },
-        });
-      }
-
-      if (!shellControlsState.handoffRunDisabled) {
-        items.push({
-          id: 'handoff-run',
-          group: 'Actions',
-          title: 'Handoff Prompt',
-          subtitle: 'Fork a continuation session from the selected run.',
-          badge: 'Handoff',
-          keywords: [shellControlsState.prompt, 'continuation'],
-          run: async () => {
-            await requestHandoffPrompt();
-          },
-        });
-      }
-
-      if (!shellControlsState.resumeSessionDisabled) {
-        items.push({
-          id: 'recover-session',
-          group: 'Actions',
-          title: 'Recover Selected Session',
-          subtitle: 'Fork a new session from the current provider session context.',
-          badge: 'Recover',
-          keywords: ['resume', 'session', activeSessionId],
-          run: async () => {
-            await requestRecoverSelectedSession();
-          },
-        });
-      }
-
-      if (!shellControlsState.cancelRunDisabled) {
-        items.push({
-          id: 'cancel-run',
-          group: 'Actions',
-          title: 'Cancel Selected Run',
-          subtitle: 'Interrupt the active provider run through the daemon.',
-          badge: 'Cancel',
-          keywords: ['stop', activeRunId],
-          run: async () => {
-            await requestCancelSelectedRun();
-          },
-        });
-      }
-
-      if (!shellControlsState.reviewRunDisabled) {
-        items.push({
-          id: 'review-run',
-          group: 'Actions',
-          title: 'Review Selected Run',
-          subtitle: 'Fork the selected run into a reviewer session.',
-          badge: 'Review',
-          keywords: ['follow-up', activeRunId],
-          run: async () => {
-            await requestFollowUpRun('review');
-          },
-        });
-      }
-
-      if (!shellControlsState.verifyRunDisabled) {
-        items.push({
-          id: 'verify-run',
-          group: 'Actions',
-          title: 'Verify Selected Run',
-          subtitle: 'Fork the selected run into a verifier session.',
-          badge: 'Verify',
-          keywords: ['follow-up', activeRunId],
-          run: async () => {
-            await requestFollowUpRun('verify');
-          },
-        });
-      }
-
-      if (!shellControlsState.applySelectedSessionPolicyDisabled) {
-        items.push({
-          id: 'apply-policy',
-          group: 'Actions',
-          title: 'Apply Session Policy',
-          subtitle: `Apply ${shellControlsState.selectedSessionApprovalPolicy} to the selected session.`,
-          badge: shellControlsState.selectedSessionApprovalPolicy,
-          keywords: ['policy', activeSessionId],
-          run: async () => {
-            await requestApplySelectedSessionPolicy();
-          },
-        });
-      }
-
-      items.push(
-        ...shellPanelsState.recentSessions.slice(0, 12).map((session) => {
-          const orchestrationLabel = formatSessionOrchestration(session) || 'main';
-          const recoveryLabel = formatSessionRecovery(session);
-          return {
-            id: `session-${session.id}`,
-            group: 'Sessions',
-            title: `${getWorkspaceLabel(session.workspacePath)} · ${session.id.slice(0, 8)}`,
-            subtitle: [
-              session.providerId,
-              orchestrationLabel,
-              session.approvalPolicy,
-              recoveryLabel,
-              session.workspacePath,
-            ]
-              .filter(Boolean)
-              .join(' · '),
-            badge: session.providerId,
-            keywords: [
-              session.id,
-              session.workspacePath,
-              session.providerId,
-              session.approvalPolicy,
-              session.providerSessionId ?? '',
-              orchestrationLabel,
-              recoveryLabel ?? '',
-            ],
-            run: async () => {
-              setRailView('recent');
-              await requestSessionSelection(session.id);
-            },
-          };
-        }),
-      );
-
-      items.push(
-        ...runViewState.runs.slice(0, 12).map((run) => ({
-          id: `run-${run.id}`,
-          group: 'Runs',
-          title: `${formatRunStatus(run.status)} · ${run.id.slice(0, 8)}`,
-          subtitle: `${formatTimestamp(run.createdAt)} · ${summarizePrompt(run.prompt)}`,
-          badge: 'Run',
-          keywords: [run.id, run.status, run.prompt, run.createdAt],
-          run: async () => {
-            setRailView('history');
-            await requestRunSelection(run.id);
-          },
-        })),
-      );
-
-      return items;
-    },
+  const quickOpenItems = useMemo(
+    () => buildQuickOpenItems({
+      setRailView,
+      setRunViewTab,
+      setUtilityView,
+      setUtilityCollapsed,
+      setFocusView,
+      focusComposer,
+      requestCreateSession,
+      requestStartRun,
+      requestRoutePrompt,
+      requestDelegatePrompt,
+      requestHandoffPrompt,
+      requestRecoverSelectedSession,
+      requestCancelSelectedRun,
+      requestFollowUpRun,
+      requestApplySelectedSessionPolicy,
+      requestSessionSelection,
+      requestRunSelection,
+      shellControlsState,
+      shellPanelsState,
+      runViewState,
+      focusView,
+      utilityCollapsed,
+    }),
     [
       activeRunId,
       activeSessionId,
@@ -843,9 +514,7 @@ export default function App() {
       shellPanelsState.recentSessions,
       utilityCollapsed,
     ],
-  );
-
-  return (
+  ); return (
     <div className="shell app-shell">
       <div
         id="toast-container"
