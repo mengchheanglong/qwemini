@@ -2016,6 +2016,44 @@ body {
   color: var(--shell-text-dim);
 }
 
+.rail-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0.2rem 0.65rem;
+}
+
+.rail-filter-input {
+  min-height: 34px;
+  padding: 0.52rem 0.68rem;
+  border-radius: 8px;
+  border: 1px solid var(--shell-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--shell-text);
+  font-size: 0.78rem;
+}
+
+.rail-filter-input::placeholder {
+  color: var(--shell-text-dim);
+}
+
+.rail-filter-clear {
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0.44rem 0.62rem;
+  border-radius: 8px;
+  border: 1px solid var(--shell-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--shell-text-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.rail-filter-clear:hover {
+  border-color: var(--shell-border-strong);
+  color: var(--shell-text);
+}
+
 .dock-scroll {
   padding-right: 0;
 }
@@ -2396,6 +2434,55 @@ body {
   border: 1px solid transparent !important;
   font-weight: 500 !important;
   box-shadow: none !important;
+}
+
+.app-menu-logo {
+  overflow: hidden;
+}
+
+.app-menu-logo-mark {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.header-icon-button:disabled {
+  opacity: 0.45;
+  transform: none;
+}
+
+.header-glyph-copy::before {
+  top: 3px;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+}
+
+.header-glyph-copy::after {
+  top: 1px;
+  left: 5px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.composer-clear-button {
+  min-height: 38px;
+  padding: 0.58rem 0.82rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--shell-text-soft);
+  font-weight: 600;
+}
+
+.composer-clear-button:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--shell-text);
 }
 
 .app-menu-bar .app-menu-item:hover {
@@ -2953,8 +3040,8 @@ body {
 }
 
 .sidebar-nav-row:hover {
-  background: rgba(255, 255, 255, 0.045) !important;
-  color: #f0f0f0 !important;
+  background: transparent !important;
+  color: inherit !important;
 }
 
 .panes-sidebar .rail-list {
@@ -5079,7 +5166,7 @@ body {
 .panes-sidebar .sidebar-primary-button:hover,
 .panes-sidebar .sidebar-mode-button:hover,
 .sidebar-nav-row:hover {
-  background: rgba(255, 255, 255, 0.045) !important;
+  background: transparent !important;
 }
 
 .panes-sidebar .sidebar-mode-button.active {
@@ -5755,6 +5842,13 @@ body {
   margin-bottom: 0.5rem;
 }
 
+.rail-project-header-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
 .rail-project-header {
   display: flex;
   align-items: center;
@@ -5791,6 +5885,67 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rail-project-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.rail-project-path {
+  color: #767676;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-item-menu-shell {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.project-item-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  color: #888;
+  font-size: 14px;
+  line-height: 0.8;
+  cursor: pointer;
+  user-select: none;
+  padding: 0 0 2px;
+}
+
+.rail-project-header-row:hover .project-item-menu-trigger,
+.rail-project-header-row:focus-within .project-item-menu-trigger,
+.project-item-menu-shell.open .project-item-menu-trigger {
+  color: #bdbdbd;
+  background: transparent;
+}
+
+.project-item-menu-popover {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+  z-index: 12;
+  min-width: 132px;
+  padding: 0.28rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #1a1a1a;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34);
 }
 
 .rail-project-threads {
@@ -5883,6 +6038,117 @@ body {
 
 .utility-shell {
   background: #161616;
+}
+
+.workspace-file-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.workspace-file-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.workspace-file-path {
+  padding: 0.34rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #b5b5b5;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.workspace-file-actions .secondary-button,
+.workspace-file-row-actions .secondary-button {
+  min-height: 26px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.workspace-file-error {
+  padding: 0.4rem 0.52rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 93, 93, 0.22);
+  background: rgba(255, 93, 93, 0.12);
+  color: #ffb3b3;
+  font-size: 11px;
+}
+
+.workspace-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.workspace-file-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.workspace-file-entry {
+  min-width: 0;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.36rem 0.48rem;
+  color: #e7e7e7;
+  text-align: left;
+}
+
+.workspace-file-entry:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.workspace-file-kind {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.workspace-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.workspace-file-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Keep composer popovers visible above card chrome. */
+.content-shell,
+.panes-main,
+.panes-composer-shell,
+.composer-config-strip,
+.composer-choice-menu,
+.composer-plus-menu {
+  overflow: visible !important;
+}
+
+.composer-plus-popover,
+.composer-choice-popover {
+  z-index: 120 !important;
 }
 
 .inspector-header {
@@ -6122,7 +6388,7 @@ body,
 }
 
 .panes-sidebar .sidebar-mode-button::before {
-  content: "◎" !important;
+  content: "+" !important;
 }
 
 .panes-sidebar .sidebar-primary-button:hover,
@@ -6349,6 +6615,54 @@ body,
   background: rgba(255, 107, 94, 0.12);
   color: #e57373;
   animation: daemon-pulse 1s ease-in-out infinite;
+}
+
+.run-toolbar-compact {
+  justify-content: flex-end;
+}
+
+.run-toolbar-close-button {
+  margin-left: auto;
+}
+
+.composer-footer-bottom {
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+
+.composer-config-strip {
+  flex: 1;
+  min-width: 0;
+}
+
+.composer-primary-actions {
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.workspace-file-toolbar {
+  flex-wrap: wrap;
+}
+
+.workspace-file-actions {
+  flex-wrap: wrap;
+}
+
+.workspace-file-help {
+  margin: 0;
+  color: #8c8c8c;
+  font-size: 11px;
+}
+
+.workspace-file-row {
+  justify-content: space-between;
+}
+
+.workspace-file-row-actions {
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 @keyframes daemon-pulse {

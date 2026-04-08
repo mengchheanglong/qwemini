@@ -5,6 +5,7 @@ import { EmptyState } from './EmptyState';
 type ArchiveSessionListProps = {
   archiveSessions: ShellPanelsState['archiveSessions'];
   selectedSessionId: string | null;
+  emptyMessage?: string;
   formatRunStatus: (status: RunStatus) => string;
   formatSessionOrchestration: (
     session: ShellPanelsState['archiveSessions'][number]['session'],
@@ -23,6 +24,7 @@ function getWorkspaceLabel(workspacePath: string) {
 export function ArchiveSessionList({
   archiveSessions,
   selectedSessionId,
+  emptyMessage,
   formatRunStatus,
   formatSessionOrchestration,
   formatSessionRecovery,
@@ -32,7 +34,7 @@ export function ArchiveSessionList({
     return (
       <EmptyState
         title="Archive is empty"
-        message="Session summaries will appear here."
+        message={emptyMessage ?? 'Session summaries will appear here.'}
       />
     );
   }

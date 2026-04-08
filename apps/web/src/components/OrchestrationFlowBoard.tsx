@@ -5,6 +5,7 @@ import type { ShellPanelsState } from '../lib/shell-panels-state';
 type OrchestrationFlowBoardProps = {
   orchestrationFlows: ShellPanelsState['orchestrationFlows'];
   selectedSessionId: string | null;
+  emptyMessage?: string;
   formatTimestamp: (timestamp: string) => string;
   formatRunStatus: (status: RunStatus) => string;
   onSelectSession: (sessionId: string) => void;
@@ -43,6 +44,7 @@ function formatFlowLatestRun(
 export function OrchestrationFlowBoard({
   orchestrationFlows,
   selectedSessionId,
+  emptyMessage,
   formatTimestamp,
   formatRunStatus,
   onSelectSession,
@@ -54,7 +56,12 @@ export function OrchestrationFlowBoard({
 
   if (flows.length === 0) {
     return (
-      <EmptyState message="Routed and child sessions will gather here as orchestration flows." />
+      <EmptyState
+        message={
+          emptyMessage ??
+          'Routed and child sessions will gather here as orchestration flows.'
+        }
+      />
     );
   }
 

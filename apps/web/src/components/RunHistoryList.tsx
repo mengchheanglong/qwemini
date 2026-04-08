@@ -6,6 +6,7 @@ type RunHistoryListProps = {
   selectedSessionId: string | null;
   runs: RunViewState['runs'];
   selectedRunId: string | null;
+  emptyMessage?: string;
   formatRunStatus: (status: RunStatus) => string;
   formatTimestamp: (timestamp: string) => string;
   onSelectRun: (runId: string) => void;
@@ -15,6 +16,7 @@ export function RunHistoryList({
   selectedSessionId,
   runs,
   selectedRunId,
+  emptyMessage,
   formatRunStatus,
   formatTimestamp,
   onSelectRun,
@@ -32,7 +34,7 @@ export function RunHistoryList({
     return (
       <EmptyState
         title="No runs yet"
-        message="No runs have been started for this session yet."
+        message={emptyMessage ?? 'No runs have been started for this session yet.'}
       />
     );
   }

@@ -43,7 +43,7 @@ import { ArchiveSessionList } from './components/ArchiveSessionList';
 import { ArtifactListPanel } from './components/ArtifactListPanel';
 import { CheckpointListPanel } from './components/CheckpointListPanel';
 import { OrchestrationFlowBoard } from './components/OrchestrationFlowBoard';
-import { QuickOpen, type QuickOpenItem } from './components/QuickOpen';
+import { QuickOpen } from './components/QuickOpen';
 import { RecentSessionList } from './components/RecentSessionList';
 import { RunHistoryList } from './components/RunHistoryList';
 import { RunTimelinePanel } from './components/RunTimelinePanel';
@@ -51,6 +51,7 @@ import { RunTranscriptPanel } from './components/RunTranscriptPanel';
 import { TabBar } from './components/TabBar';
 import { ToolActivityList } from './components/ToolActivityList';
 import { ToolRegistrationEvidenceList } from './components/ToolRegistrationEvidenceList';
+import { WorkspaceFilePanel } from './components/WorkspaceFilePanel';
 import { splitRunInspectorViews } from './lib/run-inspector-views';
 import {
   emptyRunViewState,
@@ -78,11 +79,11 @@ import {
   formatTimestamp,
 } from './shell-status-summary.js';
 import { getWorkspaceLabel, summarizePrompt } from './lib/quick-open-helpers.js';
-import { buildQuickOpenItems, type QuickOpenRuntime } from './lib/quick-open-items.js';
+import { buildQuickOpenItems } from './lib/quick-open-items.js';
 
 type RailView = 'recent' | 'history' | 'archive' | 'flows';
 type RunViewTab = 'chat' | 'timeline';
-type UtilityView = 'approvals' | 'tools' | 'artifacts' | 'checkpoints';
+type UtilityView = 'approvals' | 'tools' | 'files' | 'artifacts' | 'checkpoints';
 const UTILITY_COLLAPSED_KEY = 'qwemini:utility-collapsed';
 
 const RAIL_VIEW_ORDER: RailView[] = ['recent', 'history', 'archive', 'flows'];
@@ -90,6 +91,7 @@ const RUN_VIEW_ORDER: RunViewTab[] = ['chat', 'timeline'];
 const UTILITY_VIEW_ORDER: UtilityView[] = [
   'approvals',
   'tools',
+  'files',
   'artifacts',
   'checkpoints',
 ];
@@ -152,6 +154,28 @@ function readInitialUtilityCollapsed() {
   }
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return (
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select' ||
+    target.isContentEditable
+  );
+}
+
+function includesSearch(value: string, needle: string): boolean {
+  if (!needle) {
+    return true;
+  }
+
+  return value.toLowerCase().includes(needle);
+}
+
 export default function App() {
   const [runViewState, setRunViewState] = useState<RunViewState>(
     emptyRunViewState,
@@ -169,11 +193,12 @@ export default function App() {
     readInitialUtilityCollapsed(),
   );
   const [focusView, setFocusView] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(true);
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
   const [showSessionSetup, setShowSessionSetup] = useState(false);
-  const [showRunControls, setShowRunControls] = useState(false);
+  const [showRunToolbar, setShowRunToolbar] = useState(true);
+  const [railFilter, setRailFilter] = useState('');
   const { textareaRef, autoResize } = useAutoResizeTextarea();
+  const railFilterInputRef = useRef<HTMLInputElement | null>(null);
   const composerPlusMenuRef = useRef<HTMLDetailsElement | null>(null);
   const composerProviderMenuRef = useRef<HTMLDetailsElement | null>(null);
   const composerAccessMenuRef = useRef<HTMLDetailsElement | null>(null);
@@ -225,6 +250,20 @@ export default function App() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       const isMetaKey = event.metaKey || event.ctrlKey;
+
+      if (
+        !isMetaKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key === '/' &&
+        !isEditableTarget(event.target)
+      ) {
+        event.preventDefault();
+        railFilterInputRef.current?.focus();
+        railFilterInputRef.current?.select();
+        return;
+      }
+
       if (isMetaKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setQuickOpenVisible((current) => !current);
@@ -279,6 +318,87 @@ export default function App() {
     };
   }, [utilityCollapsed]);
 
+  const normalizedRailFilter = railFilter.trim().toLowerCase();
+
+  const filteredRecentSessions = useMemo(
+    () =>
+      shellPanelsState.recentSessions.filter((session) => {
+        const haystack = [
+          session.id,
+          session.workspacePath,
+          session.providerId,
+          session.approvalPolicy,
+          session.latestRunPrompt ?? '',
+          session.orchestration?.kind ?? '',
+          session.orchestration?.role ?? '',
+          session.recovery?.kind ?? '',
+        ].join(' ');
+        return includesSearch(haystack, normalizedRailFilter);
+      }),
+    [shellPanelsState.recentSessions, normalizedRailFilter],
+  );
+
+  const filteredRuns = useMemo(
+    () =>
+      runViewState.runs.filter((run) => {
+        const haystack = [run.id, run.status, run.prompt, run.createdAt].join(' ');
+        return includesSearch(haystack, normalizedRailFilter);
+      }),
+    [runViewState.runs, normalizedRailFilter],
+  );
+
+  const filteredArchiveSessions = useMemo(
+    () =>
+      shellPanelsState.archiveSessions.filter((summary) => {
+        const haystack = [
+          summary.session.id,
+          summary.session.workspacePath,
+          summary.session.providerId,
+          summary.session.approvalPolicy,
+          summary.latestRun?.prompt ?? '',
+          summary.latestRun?.status ?? '',
+          summary.session.orchestration?.kind ?? '',
+          summary.session.orchestration?.role ?? '',
+          summary.session.recovery?.kind ?? '',
+        ].join(' ');
+        return includesSearch(haystack, normalizedRailFilter);
+      }),
+    [shellPanelsState.archiveSessions, normalizedRailFilter],
+  );
+
+  const filteredOrchestrationFlows = useMemo(
+    () =>
+      shellPanelsState.orchestrationFlows.filter((flow) => {
+        const rootHaystack = [
+          flow.rootSession.id,
+          flow.rootSession.workspacePath,
+          flow.rootSession.providerId,
+          flow.rootSession.approvalPolicy,
+          flow.rootLatestRun?.prompt ?? '',
+          flow.rootLatestRun?.status ?? '',
+        ].join(' ');
+
+        if (includesSearch(rootHaystack, normalizedRailFilter)) {
+          return true;
+        }
+
+        return flow.sessions.some((summary) => {
+          const sessionHaystack = [
+            summary.session.id,
+            summary.session.workspacePath,
+            summary.session.providerId,
+            summary.session.approvalPolicy,
+            summary.session.orchestration?.kind ?? '',
+            summary.session.orchestration?.role ?? '',
+            summary.latestRun?.prompt ?? '',
+            summary.latestRun?.status ?? '',
+          ].join(' ');
+          return includesSearch(sessionHaystack, normalizedRailFilter);
+        });
+      }),
+    [shellPanelsState.orchestrationFlows, normalizedRailFilter],
+  );
+
   const shellStyle = useMemo(
     () =>
       ({
@@ -290,16 +410,16 @@ export default function App() {
 
   const railTabs = useMemo(
     () => [
-      { id: 'recent' as const, label: 'Recent', badge: shellPanelsState.recentSessions.length },
-      { id: 'history' as const, label: 'Runs', badge: runViewState.runs.length },
-      { id: 'archive' as const, label: 'Archive', badge: shellPanelsState.archiveSessions.length },
-      { id: 'flows' as const, label: 'Flows', badge: shellPanelsState.orchestrationFlows.length },
+      { id: 'recent' as const, label: 'Recent', badge: filteredRecentSessions.length },
+      { id: 'history' as const, label: 'Runs', badge: filteredRuns.length },
+      { id: 'archive' as const, label: 'Archive', badge: filteredArchiveSessions.length },
+      { id: 'flows' as const, label: 'Flows', badge: filteredOrchestrationFlows.length },
     ],
     [
-      runViewState.runs.length,
-      shellPanelsState.archiveSessions.length,
-      shellPanelsState.orchestrationFlows.length,
-      shellPanelsState.recentSessions.length,
+      filteredArchiveSessions.length,
+      filteredOrchestrationFlows.length,
+      filteredRecentSessions.length,
+      filteredRuns.length,
     ],
   );
 
@@ -331,6 +451,10 @@ export default function App() {
         badge: shellPanelsState.tools.length,
       },
       {
+        id: 'files' as const,
+        label: 'Files',
+      },
+      {
         id: 'artifacts' as const,
         label: 'Artifacts',
         badge: shellPanelsState.artifacts.length,
@@ -348,25 +472,6 @@ export default function App() {
       shellPanelsState.tools.length,
     ],
   );
-  const currentRailBadge = useMemo(() => {
-    if (railView === 'history') {
-      return runViewState.runs.length;
-    }
-    if (railView === 'archive') {
-      return shellPanelsState.archiveSessions.length;
-    }
-    if (railView === 'flows') {
-      return shellPanelsState.orchestrationFlows.length;
-    }
-    return shellPanelsState.recentSessions.length;
-  }, [
-    railView,
-    runViewState.runs.length,
-    shellPanelsState.archiveSessions.length,
-    shellPanelsState.orchestrationFlows.length,
-    shellPanelsState.recentSessions.length,
-  ]);
-
   const activeRunId = runViewState.selectedRun?.id?.slice(0, 8) ?? 'none';
   const activeSessionId =
     shellPanelsState.selectedSessionId?.slice(0, 8) ?? 'none';
@@ -377,12 +482,26 @@ export default function App() {
   const conversationWorkspace = shellControlsState.workspacePath
     ? getWorkspaceLabel(shellControlsState.workspacePath)
     : 'Workspace';
+  const menuWorkspaceContext = useMemo(() => {
+    const normalized = shellControlsState.workspacePath.trim();
+    if (!normalized) {
+      return conversationWorkspace;
+    }
+
+    const segments = normalized.split(/[\\/]/).filter(Boolean);
+    const leaf = segments.at(-1) ?? normalized;
+    const parent = segments.at(-2) ?? null;
+    if (leaf.toLowerCase() === 'qwemini' && parent) {
+      return `${parent}/${leaf}`;
+    }
+
+    return leaf;
+  }, [shellControlsState.workspacePath, conversationWorkspace]);
   const activeProviderId =
     shellPanelsState.selectedProviderId ?? shellControlsState.providerId;
   const activeApprovalPolicy = hasActiveSession
     ? shellControlsState.selectedSessionApprovalPolicy
     : shellControlsState.sessionApprovalPolicy;
-  const sendButtonLabel = hasActiveSession ? 'Send' : 'Send';
   const composerPlaceholder = hasActiveSession
     ? 'Ask for follow-up changes'
     : 'Ask Qwemini to work on this workspace';
@@ -434,6 +553,24 @@ export default function App() {
     if (composerAccessMenuRef.current) {
       composerAccessMenuRef.current.open = false;
     }
+  }
+
+  function handleAddFolderToRail() {
+    const nextWorkspacePathInput = window.prompt('Folder path');
+    if (!nextWorkspacePathInput) {
+      return;
+    }
+
+    const nextWorkspacePath = nextWorkspacePathInput.trim();
+    if (!nextWorkspacePath) {
+      return;
+    }
+
+    void (async () => {
+      await requestSessionDraftChange({ workspacePath: nextWorkspacePath });
+      await requestWorkspaceDraftCommit();
+      await requestCreateSession();
+    })();
   }
 
   function renderRoutingToolLabel(tool: RoutingToolRequirement) {
@@ -533,14 +670,11 @@ export default function App() {
 
       <header className="app-menu-bar">
         <div className="app-menu-cluster app-menu-cluster-center">
-          <button type="button" className="app-menu-logo" aria-label="Qwemini home">
-            <span className="app-menu-logo-glyph" aria-hidden="true"></span>
-          </button>
+          <div className="app-menu-logo" aria-hidden="true">
+            <img src="/qwemini-mark.svg" alt="" className="app-menu-logo-mark" />
+          </div>
           <span className="app-menu-brand">qwemini</span>
-          <span className="app-menu-context">{conversationWorkspace.toLowerCase()}</span>
-          <button type="button" className="app-menu-item app-menu-item-icon" aria-label="More">
-            ...
-          </button>
+          <span className="app-menu-context">{menuWorkspaceContext}</span>
         </div>
         <span
           id="daemon-connection-indicator"
@@ -566,8 +700,8 @@ export default function App() {
                   onClick={() => {
                     setShowSessionSetup((current) => !current);
                   }}
-                  aria-label={showSessionSetup ? 'Hide setup' : 'Show setup'}
-                  title={showSessionSetup ? 'Hide setup' : 'Show setup'}
+                  aria-label={showSessionSetup ? 'Hide session setup' : 'Show session setup'}
+                  title={showSessionSetup ? 'Hide session setup' : 'Show session setup'}
                 >
                   {showSessionSetup ? '−' : '+'}
                 </button>
@@ -584,12 +718,12 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  className={`sidebar-mode-button${railView === 'flows' ? ' active' : ''}`}
+                  className="sidebar-mode-button"
                   onClick={() => {
-                    setRailView(railView === 'flows' ? 'recent' : 'flows');
+                    handleAddFolderToRail();
                   }}
                 >
-                  {railView === 'flows' ? 'Back To Sessions' : 'Agents'}
+                  Add folder
                 </button>
               </div>
             </div>
@@ -685,21 +819,76 @@ export default function App() {
                   setRailView('recent');
                 }}
               >
-                {railView === 'recent' ? '+' : 'Back'}
+                {railView === 'recent' ? (showSessionSetup ? 'Hide setup' : 'Setup') : 'Back'}
               </button>
+            </div>
+
+            <div className="rail-filter-row">
+              <input
+                ref={railFilterInputRef}
+                type="search"
+                className="rail-filter-input"
+                value={railFilter}
+                placeholder={`Filter ${getRailSectionLabel(railView).toLowerCase()}...`}
+                aria-label="Filter rail items"
+                onChange={(event) => {
+                  setRailFilter(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && railFilter) {
+                    event.preventDefault();
+                    setRailFilter('');
+                  }
+                }}
+              />
+              {railFilter ? (
+                <button
+                  type="button"
+                  className="rail-filter-clear"
+                  onClick={() => {
+                    setRailFilter('');
+                    railFilterInputRef.current?.focus();
+                  }}
+                >
+                  Clear
+                </button>
+              ) : null}
             </div>
 
             <div className="section-scroll dock-scroll">
               {railView === 'recent' ? (
                 <div id="session-list" className="list rail-list">
                   <RecentSessionList
-                    sessions={shellPanelsState.recentSessions}
+                    sessions={filteredRecentSessions}
                     selectedSessionId={shellPanelsState.selectedSessionId}
                     emptyMessage={
-                      shellPanelsState.recentSessionsMessage ?? 'No sessions yet.'
+                      normalizedRailFilter
+                        ? `No threads match "${railFilter.trim()}".`
+                        : shellPanelsState.recentSessionsMessage ?? 'No sessions yet.'
                     }
                     onSelectSession={(sessionId) => {
                       void requestSessionSelection(sessionId);
+                    }}
+                    onDeleteWorkspaceGroup={(workspacePath) => {
+                      const sessionsInWorkspace = shellPanelsState.recentSessions.filter(
+                        (session) => session.workspacePath === workspacePath,
+                      );
+                      if (sessionsInWorkspace.length === 0) {
+                        return;
+                      }
+
+                      const confirmed = window.confirm(
+                        `Delete folder group \"${workspacePath}\" and ${sessionsInWorkspace.length} thread(s)?`,
+                      );
+                      if (!confirmed) {
+                        return;
+                      }
+
+                      void (async () => {
+                        for (const session of sessionsInWorkspace) {
+                          await requestSessionDelete(session.id);
+                        }
+                      })();
                     }}
                     onDeleteSession={(sessionId) => {
                       void requestSessionDelete(sessionId);
@@ -712,8 +901,13 @@ export default function App() {
                 <div id="run-history-list" className="list rail-list compact">
                   <RunHistoryList
                     selectedSessionId={runViewState.selectedSessionId}
-                    runs={runViewState.runs}
+                    runs={filteredRuns}
                     selectedRunId={runViewState.selectedRun?.id ?? null}
+                    emptyMessage={
+                      normalizedRailFilter
+                        ? `No runs match "${railFilter.trim()}".`
+                        : undefined
+                    }
                     formatRunStatus={formatRunStatus}
                     formatTimestamp={formatTimestamp}
                     onSelectRun={(runId) => {
@@ -726,8 +920,13 @@ export default function App() {
               {railView === 'archive' ? (
                 <div id="archive-list" className="list rail-list compact">
                   <ArchiveSessionList
-                    archiveSessions={shellPanelsState.archiveSessions}
+                    archiveSessions={filteredArchiveSessions}
                     selectedSessionId={shellPanelsState.selectedSessionId}
+                    emptyMessage={
+                      normalizedRailFilter
+                        ? `No archived sessions match "${railFilter.trim()}".`
+                        : undefined
+                    }
                     formatRunStatus={formatRunStatus}
                     formatSessionOrchestration={formatSessionOrchestration}
                     formatSessionRecovery={formatSessionRecovery}
@@ -741,8 +940,13 @@ export default function App() {
               {railView === 'flows' ? (
                 <div id="orchestration-board" className="list rail-list compact">
                   <OrchestrationFlowBoard
-                    orchestrationFlows={shellPanelsState.orchestrationFlows}
+                    orchestrationFlows={filteredOrchestrationFlows}
                     selectedSessionId={shellPanelsState.selectedSessionId}
+                    emptyMessage={
+                      normalizedRailFilter
+                        ? `No flows match "${railFilter.trim()}".`
+                        : undefined
+                    }
                     formatTimestamp={formatTimestamp}
                     formatRunStatus={formatRunStatus}
                     onSelectSession={(sessionId) => {
@@ -823,17 +1027,6 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  className="header-icon-button"
-                  title="Compose"
-                  aria-label="Compose"
-                  onClick={() => {
-                    focusComposer();
-                  }}
-                >
-                  <span className="header-glyph header-glyph-compose" aria-hidden="true"></span>
-                </button>
-                <button
-                  type="button"
                   className={`header-icon-button${!utilityCollapsed ? ' active' : ''}`}
                   title={utilityCollapsed ? 'Open right rail' : 'Hide right rail'}
                   aria-label={utilityCollapsed ? 'Open right rail' : 'Hide right rail'}
@@ -844,22 +1037,10 @@ export default function App() {
                 >
                   <span className="header-glyph header-glyph-inspector" aria-hidden="true"></span>
                 </button>
-                <button
-                  type="button"
-                  className={`header-icon-button${showRunControls ? ' active' : ''}`}
-                  title={showRunControls ? 'Hide controls' : 'Show controls'}
-                  aria-label={showRunControls ? 'Hide controls' : 'Show controls'}
-                  aria-pressed={showRunControls}
-                  onClick={() => {
-                    setShowRunControls((current) => !current);
-                  }}
-                >
-                  <span className="header-glyph header-glyph-controls" aria-hidden="true"></span>
-                </button>
               </div>
             </header>
 
-            {hasActiveSession && showRunControls ? (
+            {hasActiveSession && showRunToolbar ? (
               <div className="action-row run-toolbar panes-toolbar">
                 <div className="run-toolbar-group">
                   <button
@@ -905,6 +1086,17 @@ export default function App() {
                 </div>
                 <div className="run-toolbar-group">
                   <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setUtilityView('files');
+                      setUtilityCollapsed(false);
+                    }}
+                    title="Open files panel"
+                  >
+                    Files
+                  </button>
+                  <button
                     id="cancel-run-button"
                     type="button"
                     className="secondary-button"
@@ -940,7 +1132,31 @@ export default function App() {
                   >
                     Verify
                   </button>
+                  <button
+                    type="button"
+                    className="secondary-button run-toolbar-close-button"
+                    onClick={() => {
+                      setShowRunToolbar(false);
+                    }}
+                    title="Hide run controls"
+                  >
+                    Close
+                  </button>
                 </div>
+              </div>
+            ) : null}
+
+            {hasActiveSession && !showRunToolbar ? (
+              <div className="action-row run-toolbar-compact">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    setShowRunToolbar(true);
+                  }}
+                >
+                  Show controls
+                </button>
               </div>
             ) : null}
 
@@ -1086,7 +1302,7 @@ export default function App() {
                           </label>
                         ) : (
                           <div className="composer-config-note">
-                            <strong>Thread settings are pinned</strong>
+                            <strong>Thread settings are locked</strong>
                             <span>
                               This thread is already bound to {shellPanelsState.selectedProviderId ?? 'its provider'} in{' '}
                               {conversationWorkspace}.
@@ -1281,6 +1497,18 @@ export default function App() {
                       <span>{sendHelperPrimary}</span>
                       <span>{sendHelperSecondary}</span>
                     </div>
+                    {hasPromptDraft ? (
+                      <button
+                        type="button"
+                        className="composer-clear-button"
+                        onClick={() => {
+                          void requestPromptDraftChange('');
+                          autoResize();
+                        }}
+                      >
+                        Clear
+                      </button>
+                    ) : null}
                     <button
                       id="start-run-button"
                       className="composer-send-button"
@@ -1289,7 +1517,7 @@ export default function App() {
                       disabled={shellControlsState.startRunDisabled}
                     >
                       <span className="composer-send-icon" aria-hidden="true">↗</span>
-                      <span className="composer-send-label">{sendButtonLabel}</span>
+                      <span className="composer-send-label">Send</span>
                     </button>
                   </div>
                 </div>
@@ -1440,6 +1668,16 @@ export default function App() {
                     />
                   </div>
                 </div>
+              </section>
+            ) : null}
+
+            {utilityView === 'files' ? (
+              <section className="utility-section utility-stack">
+                <div className="utility-section-heading">
+                  <p className="eyebrow">Workspace</p>
+                  <h3>Files</h3>
+                </div>
+                <WorkspaceFilePanel workspacePath={shellControlsState.workspacePath} />
               </section>
             ) : null}
 

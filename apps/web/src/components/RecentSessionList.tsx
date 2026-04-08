@@ -7,12 +7,31 @@ type RecentSessionListProps = {
   selectedSessionId: string | null;
   emptyMessage: string;
   onSelectSession: (sessionId: string) => void;
+  onDeleteWorkspaceGroup: (workspacePath: string) => void;
   onDeleteSession: (sessionId: string) => void;
 };
 
 function getWorkspaceLabel(workspacePath: string) {
   const segments = workspacePath.split(/[\\/]/).filter(Boolean);
   return segments.at(-1) ?? workspacePath;
+}
+
+function getWorkspaceDisplayLabel(
+  workspacePath: string,
+  duplicateLeafLabels: Set<string>,
+) {
+  const segments = workspacePath.split(/[\\/]/).filter(Boolean);
+  const leaf = segments.at(-1) ?? workspacePath;
+  if (!duplicateLeafLabels.has(leaf.toLowerCase())) {
+    return leaf;
+  }
+
+  const parent = segments.at(-2);
+  if (!parent) {
+    return leaf;
+  }
+
+  return `${parent}/${leaf}`;
 }
 
 function getThreadTitle(session: ShellPanelsState['recentSessions'][number]) {
@@ -37,13 +56,15 @@ export function RecentSessionList({
   selectedSessionId,
   emptyMessage,
   onSelectSession,
+  onDeleteWorkspaceGroup,
   onDeleteSession,
 }: RecentSessionListProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
+  const [openMenuWorkspacePath, setOpenMenuWorkspacePath] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!openMenuSessionId) {
+    if (!openMenuSessionId && !openMenuWorkspacePath) {
       return;
     }
 
@@ -53,18 +74,31 @@ export function RecentSessionList({
         return;
       }
 
-      if (target.closest('.session-item-menu-shell')) {
+      if (
+        target.closest('.session-item-menu-shell') ||
+        target.closest('.project-item-menu-shell')
+      ) {
         return;
       }
 
       setOpenMenuSessionId(null);
+      setOpenMenuWorkspacePath(null);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpenMenuSessionId(null);
+        setOpenMenuWorkspacePath(null);
+      }
     }
 
     window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [openMenuSessionId]);
+  }, [openMenuSessionId, openMenuWorkspacePath]);
 
   if (sessions.length === 0) {
     return <EmptyState title="No sessions yet" message={emptyMessage} />;
@@ -91,34 +125,92 @@ export function RecentSessionList({
     return groups;
   }, []);
 
+  const labelCounts = groupedSessions.reduce<Map<string, number>>((counts, group) => {
+    const key = group.workspaceLabel.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>());
+
+  const duplicateLeafLabels = new Set(
+    [...labelCounts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([label]) => label),
+  );
+
   return (
     <>
       {groupedSessions.map((group) => (
         <section key={group.workspacePath} className="rail-project-group">
-          <button
-            type="button"
-            className="rail-project-header"
-            aria-expanded={!collapsedGroups[group.workspacePath]}
-            onClick={() => {
-              setCollapsedGroups((current) => ({
-                ...current,
-                [group.workspacePath]: !current[group.workspacePath],
-              }));
-            }}
-          >
-            <span
-              className={`rail-project-caret${
-                collapsedGroups[group.workspacePath] ? ' is-collapsed' : ''
-              }`}
-              aria-hidden="true"
+          <div className="rail-project-header-row">
+            <button
+              type="button"
+              className="rail-project-header"
+              aria-expanded={!collapsedGroups[group.workspacePath]}
+              onClick={() => {
+                setCollapsedGroups((current) => ({
+                  ...current,
+                  [group.workspacePath]: !current[group.workspacePath],
+                }));
+              }}
             >
-              ▾
-            </span>
-            <span className="rail-project-icon" aria-hidden="true">
-              ⌂
-            </span>
-            <span className="rail-project-name">{group.workspaceLabel}</span>
-          </button>
+              <span
+                className={`rail-project-caret${
+                  collapsedGroups[group.workspacePath] ? ' is-collapsed' : ''
+                }`}
+                aria-hidden="true"
+              >
+                ▾
+              </span>
+              <span className="rail-project-icon" aria-hidden="true">
+                ⌂
+              </span>
+              <span className="rail-project-info">
+                <span className="rail-project-name">
+                  {getWorkspaceDisplayLabel(group.workspacePath, duplicateLeafLabels)}
+                </span>
+                <span className="rail-project-path" title={group.workspacePath}>
+                  {group.workspacePath}
+                </span>
+              </span>
+            </button>
+            <div
+              className={`project-item-menu-shell${
+                openMenuWorkspacePath === group.workspacePath ? ' open' : ''
+              }`}
+            >
+              <button
+                type="button"
+                className="project-item-menu-trigger"
+                aria-label={`Folder menu for ${group.workspacePath}`}
+                title="Folder actions"
+                aria-expanded={openMenuWorkspacePath === group.workspacePath}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpenMenuSessionId(null);
+                  setOpenMenuWorkspacePath((current) =>
+                    current === group.workspacePath ? null : group.workspacePath,
+                  );
+                }}
+              >
+                …
+              </button>
+              <div
+                className="project-item-menu-popover"
+                hidden={openMenuWorkspacePath !== group.workspacePath}
+              >
+                <button
+                  type="button"
+                  className="session-item-menu-action"
+                  onClick={() => {
+                    setOpenMenuWorkspacePath(null);
+                    onDeleteWorkspaceGroup(group.workspacePath);
+                  }}
+                >
+                  Delete folder
+                </button>
+              </div>
+            </div>
+          </div>
 
           {!collapsedGroups[group.workspacePath] ? (
             <div className="rail-project-threads">
@@ -152,6 +244,7 @@ export function RecentSessionList({
                       aria-expanded={openMenuSessionId === session.id}
                       onClick={(event) => {
                         event.stopPropagation();
+                        setOpenMenuWorkspacePath(null);
                         setOpenMenuSessionId((current) =>
                           current === session.id ? null : session.id,
                         );

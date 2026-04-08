@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { mkdir, readdir, rename as renamePath, rm, stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -222,6 +222,48 @@ type PendingApproval = {
   resolve: (decision: ProviderApprovalDecision) => void;
 };
 
+type WorkspaceEntryKind = 'file' | 'folder';
+
+type WorkspaceEntryRecord = {
+  name: string;
+  relativePath: string;
+  kind: WorkspaceEntryKind;
+};
+
+type WorkspaceEntriesResponse = {
+  workspacePath: string;
+  relativePath: string;
+  entries: WorkspaceEntryRecord[];
+};
+
+type CreateWorkspaceFolderRequest = {
+  workspacePath: string;
+  parentPath?: string | null;
+  name: string;
+};
+
+type RenameWorkspaceEntryRequest = {
+  workspacePath: string;
+  targetPath: string;
+  nextName: string;
+};
+
+function normalizeRelativePath(value: string): string {
+  return value.replace(/\\/g, '/').replace(/^\/+/, '').trim();
+}
+
+function isValidEntryName(value: string): boolean {
+  if (!value || value === '.' || value === '..') {
+    return false;
+  }
+
+  if (value.includes('/') || value.includes('\\')) {
+    return false;
+  }
+
+  return true;
+}
+
 export class QweminiDaemon {
   private readonly port: number;
   private readonly dataDirectory: string;
@@ -290,6 +332,84 @@ export class QweminiDaemon {
           ),
         } satisfies ToolPlaneResponse,
       );
+      return;
+    }
+
+    if (request.method === 'GET' && pathname === '/api/workspace/entries') {
+      const workspacePath = url.searchParams.get('workspacePath');
+      if (!workspacePath) {
+        sendJson(response, 400, { error: 'workspacePath is required.' });
+        return;
+      }
+
+      const relativePath = url.searchParams.get('relativePath') ?? '';
+      const listing = await this.listWorkspaceEntries(workspacePath, relativePath);
+      if (listing instanceof Error) {
+        sendJson(response, 409, { error: listing.message });
+        return;
+      }
+
+      sendJson(response, 200, listing satisfies WorkspaceEntriesResponse);
+      return;
+    }
+
+    if (request.method === 'POST' && pathname === '/api/workspace/folders') {
+      const body = await readJsonBody<CreateWorkspaceFolderRequest>(request);
+      const created = await this.createWorkspaceFolder(body);
+      if (created instanceof Error) {
+        sendJson(response, 409, { error: created.message });
+        return;
+      }
+
+      sendJson(response, 201, { ok: true });
+      return;
+    }
+
+    if (request.method === 'PATCH' && pathname === '/api/workspace/entries/rename') {
+      const body = await readJsonBody<RenameWorkspaceEntryRequest>(request);
+      const renamed = await this.renameWorkspaceEntry(body);
+      if (renamed instanceof Error) {
+        sendJson(response, 409, { error: renamed.message });
+        return;
+      }
+
+      sendJson(response, 200, { ok: true });
+      return;
+    }
+
+    if (request.method === 'DELETE' && pathname === '/api/workspace/entries') {
+      const workspacePath = url.searchParams.get('workspacePath');
+      const targetPath = url.searchParams.get('targetPath');
+      if (!workspacePath || targetPath === null) {
+        sendJson(response, 400, { error: 'workspacePath and targetPath are required.' });
+        return;
+      }
+
+      const deleted = await this.deleteWorkspaceEntry(workspacePath, targetPath);
+      if (deleted instanceof Error) {
+        sendJson(response, 409, { error: deleted.message });
+        return;
+      }
+
+      sendJson(response, 200, { ok: true });
+      return;
+    }
+
+    if (request.method === 'DELETE' && pathname === '/api/workspace/folders') {
+      const workspacePath = url.searchParams.get('workspacePath');
+      const targetPath = url.searchParams.get('targetPath');
+      if (!workspacePath || targetPath === null) {
+        sendJson(response, 400, { error: 'workspacePath and targetPath are required.' });
+        return;
+      }
+
+      const deleted = await this.deleteWorkspaceFolder(workspacePath, targetPath);
+      if (deleted instanceof Error) {
+        sendJson(response, 409, { error: deleted.message });
+        return;
+      }
+
+      sendJson(response, 200, { ok: true });
       return;
     }
 
@@ -639,6 +759,222 @@ export class QweminiDaemon {
       dataDirectory: this.dataDirectory,
       providers,
     };
+  }
+
+  private resolveWorkspaceTargetPath(
+    workspacePath: string,
+    relativePath: string,
+  ): { workspaceRoot: string; absolutePath: string } | Error {
+    const workspaceRoot = path.resolve(workspacePath);
+    const normalizedRelativePath = normalizeRelativePath(relativePath);
+    const absolutePath = path.resolve(
+      workspaceRoot,
+      normalizedRelativePath || '.',
+    );
+    const relativeFromRoot = path.relative(workspaceRoot, absolutePath);
+
+    if (
+      relativeFromRoot.startsWith('..') ||
+      path.isAbsolute(relativeFromRoot)
+    ) {
+      return new Error('Path escapes the selected workspace.');
+    }
+
+    return {
+      workspaceRoot,
+      absolutePath,
+    };
+  }
+
+  private toWorkspaceRelativePath(workspaceRoot: string, absolutePath: string): string {
+    const relativePath = path.relative(workspaceRoot, absolutePath);
+    if (!relativePath) {
+      return '';
+    }
+
+    return relativePath.split(path.sep).join('/');
+  }
+
+  private async listWorkspaceEntries(
+    workspacePath: string,
+    relativePath: string,
+  ): Promise<WorkspaceEntriesResponse | Error> {
+    const resolved = this.resolveWorkspaceTargetPath(workspacePath, relativePath);
+    if (resolved instanceof Error) {
+      return resolved;
+    }
+
+    const { workspaceRoot, absolutePath } = resolved;
+    try {
+      const targetStats = await stat(absolutePath);
+      if (!targetStats.isDirectory()) {
+        return new Error('The selected path is not a folder.');
+      }
+
+      const entries = await readdir(absolutePath, { withFileTypes: true });
+      const mappedEntries: WorkspaceEntryRecord[] = entries
+        .filter((entry) => entry.isDirectory() || entry.isFile())
+        .map((entry) => {
+          const entryAbsolutePath = path.join(absolutePath, entry.name);
+          const kind: WorkspaceEntryKind = entry.isDirectory() ? 'folder' : 'file';
+          return {
+            name: entry.name,
+            relativePath: this.toWorkspaceRelativePath(
+              workspaceRoot,
+              entryAbsolutePath,
+            ),
+            kind,
+          };
+        })
+        .sort((left, right) => {
+          if (left.kind !== right.kind) {
+            return left.kind === 'folder' ? -1 : 1;
+          }
+
+          return left.name.localeCompare(right.name);
+        });
+
+      return {
+        workspacePath: workspaceRoot,
+        relativePath: this.toWorkspaceRelativePath(workspaceRoot, absolutePath),
+        entries: mappedEntries,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return new Error(`Unable to list workspace entries: ${message}`);
+    }
+  }
+
+  private async createWorkspaceFolder(
+    request: CreateWorkspaceFolderRequest,
+  ): Promise<true | Error> {
+    const folderName = request.name.trim();
+    if (!isValidEntryName(folderName)) {
+      return new Error('Folder name is invalid.');
+    }
+
+    const resolvedParent = this.resolveWorkspaceTargetPath(
+      request.workspacePath,
+      request.parentPath ?? '',
+    );
+    if (resolvedParent instanceof Error) {
+      return resolvedParent;
+    }
+
+    try {
+      const parentStats = await stat(resolvedParent.absolutePath);
+      if (!parentStats.isDirectory()) {
+        return new Error('The parent path is not a folder.');
+      }
+
+      await mkdir(path.join(resolvedParent.absolutePath, folderName));
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return new Error(`Unable to create folder: ${message}`);
+    }
+  }
+
+  private async renameWorkspaceEntry(
+    request: RenameWorkspaceEntryRequest,
+  ): Promise<true | Error> {
+    const nextName = request.nextName.trim();
+    if (!isValidEntryName(nextName)) {
+      return new Error('New name is invalid.');
+    }
+
+    const resolvedTarget = this.resolveWorkspaceTargetPath(
+      request.workspacePath,
+      request.targetPath,
+    );
+    if (resolvedTarget instanceof Error) {
+      return resolvedTarget;
+    }
+
+    try {
+      await stat(resolvedTarget.absolutePath);
+      const parentPath = path.dirname(resolvedTarget.absolutePath);
+      const nextAbsolutePath = path.resolve(parentPath, nextName);
+      const relativeFromRoot = path.relative(
+        resolvedTarget.workspaceRoot,
+        nextAbsolutePath,
+      );
+      if (
+        relativeFromRoot.startsWith('..') ||
+        path.isAbsolute(relativeFromRoot)
+      ) {
+        return new Error('Renamed path escapes the selected workspace.');
+      }
+
+      await renamePath(resolvedTarget.absolutePath, nextAbsolutePath);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return new Error(`Unable to rename entry: ${message}`);
+    }
+  }
+
+  private async deleteWorkspaceEntry(
+    workspacePath: string,
+    targetPath: string,
+  ): Promise<true | Error> {
+    const normalizedTargetPath = normalizeRelativePath(targetPath);
+    if (!normalizedTargetPath) {
+      return new Error('Refusing to delete the workspace root folder.');
+    }
+
+    const resolvedTarget = this.resolveWorkspaceTargetPath(
+      workspacePath,
+      normalizedTargetPath,
+    );
+    if (resolvedTarget instanceof Error) {
+      return resolvedTarget;
+    }
+
+    try {
+      const targetStats = await stat(resolvedTarget.absolutePath);
+      if (targetStats.isDirectory()) {
+        await rm(resolvedTarget.absolutePath, { recursive: true, force: false });
+      } else {
+        await rm(resolvedTarget.absolutePath, { force: false });
+      }
+
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return new Error(`Unable to delete entry: ${message}`);
+    }
+  }
+
+  private async deleteWorkspaceFolder(
+    workspacePath: string,
+    targetPath: string,
+  ): Promise<true | Error> {
+    const normalizedTargetPath = normalizeRelativePath(targetPath);
+    if (!normalizedTargetPath) {
+      return new Error('Refusing to delete the workspace root folder.');
+    }
+
+    const resolvedTarget = this.resolveWorkspaceTargetPath(
+      workspacePath,
+      normalizedTargetPath,
+    );
+    if (resolvedTarget instanceof Error) {
+      return resolvedTarget;
+    }
+
+    try {
+      const targetStats = await stat(resolvedTarget.absolutePath);
+      if (!targetStats.isDirectory()) {
+        return new Error('Only folders can be deleted from this action.');
+      }
+
+      await rm(resolvedTarget.absolutePath, { recursive: true, force: false });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return new Error(`Unable to delete folder: ${message}`);
+    }
   }
 
   private async listProviderHealth(): Promise<ProviderHealth[]> {
